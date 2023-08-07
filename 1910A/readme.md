@@ -6,6 +6,16 @@ A 1U 10x100 RGB LED display.
 
 _Feel free to ask questions by opening an issue!_
 
+## 2023-08-07
+
+The fixed LED PCB is all working!
+
+![image](https://github.com/dslik/rack-display/assets/5757591/67a721bf-9912-4cb7-bf7e-81ed378c1a37)
+
+It looks really good.
+
+Next steps are setting up the controller board once I receive it, and updating the software to allow images to be loaded over the serial port. I should also consider a LORA version.
+
 ## 2023-07-27
 
 Next rev of the LED PCB should arrive tomorrow.
