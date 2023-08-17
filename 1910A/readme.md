@@ -1,6 +1,8 @@
 ## 1U RGB LED Display
 
-A 1U 10x100 RGB LED display.
+A 1U rack-mountable 10x100 pixel programmable RGB LED display that says, among other things:
+
+![image](https://github.com/dslik/rack-display/assets/5757591/24ec1902-c861-4dba-aabb-070941035a4c)
 
 Features:
 * Load and display bitmap images over a serial connection
