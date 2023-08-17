@@ -16,7 +16,9 @@ pico_sdk_init()
 # Tell CMake where to find the executable source file
 add_executable(${PROJECT_NAME} 
     main.c
+    image.c
     ws2812.c
+    uart.c
 )
 
 # Create C header file with the name <pio program>.pio.h

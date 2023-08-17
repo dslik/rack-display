@@ -1,7 +1,7 @@
 // ---------------------------------------------------------------------------------
-// WS2812 Utility Routines - Header
+// Serial Command-line Utilities - Header
 // ---------------------------------------------------------------------------------
-// Library routines to assist in programming with WS2812-style smart RGB LEDs.
+// Provides a simple command line interface over a UART
 // ---------------------------------------------------------------------------------
 // SPDX-FileCopyrightText: Copyright 2023 David Slik (VE7FIM)
 // SPDX-FileAttributionText: https://github.com/dslik/rack-display/
@@ -9,13 +9,15 @@
 // ---------------------------------------------------------------------------------
 
 #pragma once
-#ifndef WS2812_H
-#define WS2812_H
+#ifndef UART_H
+#define UART_H
 
-#include "hardware/pio.h"
-#include "ws2812.pio.h"
+// Globals
+extern volatile uint8_t collect_active;
 
-extern void put_pixel(uint32_t pixel_grb);
-extern uint32_t urgb_u32(uint8_t r, uint8_t g, uint8_t b);
+// UART Setup
+void uart_setup(void);
+const char* uart_command_get(void);
+void uart_command_clear(void);
 
-#endif // WS2812_H
+#endif // UART_H
