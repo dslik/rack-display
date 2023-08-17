@@ -58,3 +58,51 @@ I'm not 100% happy with this board, since I'd prefer for it to be able to be USB
 ![image](https://github.com/dslik/rack-display/assets/5757591/d7fc7049-2b41-442f-a71b-ce2f49b97ea7)
 
 This board will go out for manufacturing in the next PCB batch.
+
+## 2023-07-11
+
+The PCBs have arrived, and are ready for assembly:
+
+![image](https://github.com/dslik/rack-display/assets/5757591/35b9402c-f4ce-4884-8227-31d826511c65)
+
+Here is what the controller board looks like all assembled:
+
+![image](https://github.com/dslik/rack-display/assets/5757591/8709bf87-52c0-46c4-b503-f980dc5afe84)
+
+This assembly attaches to the back of the display, and allows you to control the display over a standard RS-232 serial connection.
+
+Unfortunately, after doing some testing, I determined that I made a few minor design mistakes in the controller board (one of them was a footprint that didn't match with the part), so I will have to do another rev. I also need to find some different barrel connectors, since the ones I have don't work with most standard power adapters.
+
+I'm having better luck with the main display board. I was able to get most of it working after a false alarm regarding power draw.
+
+Here's what it looks like on the half of the display that works:
+
+![image](https://github.com/dslik/rack-display/assets/5757591/b7be0e9d-5592-422a-b5a7-5d3fad9839e3)
+
+The reson why only half of the board is working is because I missed a trace between D177 and D178. Opps!
+
+I'll have to do another revision of this board as well, which hurts a lot more since each LED board has a BOM cost of $100.
+
+![image](https://github.com/dslik/rack-display/assets/5757591/0109787f-93cc-46a0-a70b-7d20af890955)
+
+All in all, this has proven the concept, and it looks really good in person!
+
+I am getting around 20 frames per second for half of the screen. Driving each side of the screen sequentially would give me 10 frames per second for full-screen animations.
+
+## 2023-06-22
+
+Yes, I am crazy enough to make this. Well, at least when LCSC gets my favourite RGB LEDs back in stock.
+
+Presenting the Kilopixel rack display, a 1U RGB display for your rack.
+
+Show titles, status, charts and other information in full RGB. Also usable for source indicators in broadcast plants, and anywhere else a 1U device will fit!
+
+![image](https://github.com/dslik/rack-display/assets/5757591/0d8502b4-44a8-4803-b035-05ead2894af1)
+
+And it shall be beautiful and terrible as the Morning and the Night! Fair as the Sea and the Sun and the Snow upon the Mountain!
+
+Oh, wait. Wrong description.
+
+Well, it certainly will be the most expensive board I've ever had manufactured, at over $100 in LEDs alone!
+
+And this long boi will also draw power like there is no tomorrow.... 5 amps if you blasted it at full power, So I'm going to have to be very careful that I make sure the brightness never goes above around 10% of what is capable of.
