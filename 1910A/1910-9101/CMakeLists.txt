@@ -19,6 +19,8 @@ add_executable(${PROJECT_NAME}
     image.c
     ws2812.c
     uart.c
+    sha1.c
+    snon_utils.c
 )
 
 # Create C header file with the name <pio program>.pio.h
@@ -33,6 +35,8 @@ pico_add_extra_outputs(${PROJECT_NAME})
 target_link_libraries(${PROJECT_NAME} 
     pico_stdlib
     hardware_pio
+    hardware_rtc
+    pico_unique_id
 )
 
 # Enable usb output, disable uart output

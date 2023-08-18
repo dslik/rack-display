@@ -21,11 +21,11 @@
 #include "uart.h"
 
 // Constants
-#define COMMAND_STRING_MAX_LENGTH    32
+#define COMMAND_STRING_MAX_LENGTH    64
 
 // Globals
-char collect_string[] = "00000000000000000000000000000000";
-char command_string[] = "00000000000000000000000000000000";
+char collect_string[] = "0000000000000000000000000000000000000000000000000000000000000000";
+char command_string[] = "0000000000000000000000000000000000000000000000000000000000000000";
 uint8_t collect_string_pos = 0;
 uint8_t volatile collect_active = 0;
 
@@ -38,7 +38,7 @@ void uart_rx_isr(void);
 // Set up the UART
 void uart_setup(void)
 {
-    uart_init(uart1, 9600);
+    uart_init(uart1, 115200);
     gpio_set_function(4, GPIO_FUNC_UART);
     gpio_set_function(5, GPIO_FUNC_UART);
 
