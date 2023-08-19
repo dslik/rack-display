@@ -21,6 +21,7 @@ add_executable(${PROJECT_NAME}
     uart.c
     sha1.c
     snon_utils.c
+    cJSON.c
 )
 
 # Create C header file with the name <pio program>.pio.h

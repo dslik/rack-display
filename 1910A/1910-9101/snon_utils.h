@@ -10,5 +10,7 @@
 // ---------------------------------------------------------------------------------
 
 // Utility routines
-void get_device_id(uint64_t* id);
-void get_device_entity_uuid(char* entity_name, char* uuid_buffer);
+void device_get_id(uint64_t* id);
+void device_initialize(char* device_name);
+void entity_get_uuid(char* entity_name, char* uuid_buffer);
+void entity_register(char* entity_name, char* initial_values);

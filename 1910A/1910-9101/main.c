@@ -81,9 +81,14 @@ int main() {
     }
     printf("\n");
 
-    get_device_entity_uuid("device", snprintf_buffer);
+    entity_get_uuid("device", snprintf_buffer);
     printf("Device GUID:   %s\n", snprintf_buffer);
 
+    // ===========================================================================================
+    printf("Initializing SNON entities...\n");
+
+    device_initialize("1910A 1U Rack Display");
+    entity_register("Device Time", "{\"eC\" : \"value\"}");
 
     // ===========================================================================================
     printf("Initializing real-time clock...\n");
@@ -171,7 +176,7 @@ int main() {
                     uart_puts(uart1, "\r\n  \"v\"  : [ \"");
 
                     uint64_t id = 0;
-                    get_device_id(&id);
+                    device_get_id(&id);
                     snprintf(snprintf_buffer, SNPRINTF_BUFFER_SIZE, "%016llX", id);
                     uart_puts(uart1, snprintf_buffer);
 

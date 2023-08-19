@@ -16,14 +16,21 @@
 #include "pico/unique_id.h"
 
 // Local Headers
+#include "snon_utils.h"
 #include "sha1.h"
+#include "cJSON.h"
 
 // Local Constants
 #define SNON_UUID   "C3A4DD12-EFD4-537A-885C-50EC74A2CB12"
 
+// Local Globals
+cJSON   *snon_root = NULL;
+cJSON   *snon_list = NULL;
+
+
 // =================================================================================
 
-void get_device_id(uint64_t* id)
+void device_get_id(uint64_t* id)
 {
 	pico_unique_board_id_t board_id;
 	pico_get_unique_board_id(&board_id);
@@ -46,7 +53,82 @@ char nibble_to_hexchar(uint8_t nibble)
     return(hex_value);
 }
 
-void get_device_entity_uuid(char* entity_name, char* uuid_buffer)
+void device_initialize(char* entity_name)
+{
+    char    uuid[37];
+    char    current_time[20];
+    cJSON   *entity = NULL;
+    cJSON   *name = NULL;
+    cJSON   *array = NULL;
+
+    snon_root = cJSON_CreateObject();
+    snon_list = cJSON_CreateArray();
+
+    // Create the device entity
+    entity_get_uuid("device", uuid);
+    cJSON_AddItemToObject(snon_root, uuid, entity = cJSON_CreateObject());
+    cJSON_AddStringToObject(entity, "eC", "device");
+    cJSON_AddStringToObject(entity, "eID", uuid);
+    cJSON_AddItemToObject(entity, "eN", name = cJSON_CreateObject());
+    cJSON_AddStringToObject(name, "*", entity_name);
+
+    // Add the entity to the master entity list
+    cJSON_AddItemToArray(snon_list, cJSON_CreateString(uuid));
+
+    // Create the entity list entity
+    entity_get_uuid("entities", uuid);
+    cJSON_AddItemToObject(snon_root, uuid, entity = cJSON_CreateObject());
+    cJSON_AddStringToObject(entity, "eC", "value");
+    cJSON_AddStringToObject(entity, "eID", uuid);
+    cJSON_AddItemToObject(entity, "eN", name = cJSON_CreateObject());
+    cJSON_AddStringToObject(name, "*", "Defined Entities");
+    cJSON_AddItemToObject(entity, "eV", snon_list);
+
+    cJSON_AddItemToObject(entity, "eT", array = cJSON_CreateArray());
+    snprintf(current_time, 19, "%llu", time_us_64());
+    cJSON_AddItemToArray(array, cJSON_CreateString(current_time));
+
+    // Add the entity to the master entity list
+    cJSON_AddItemToArray(snon_list, cJSON_CreateString(uuid));
+}
+
+void entity_register(char* entity_name, char* initial_values)
+{
+    char    uuid[37];
+    char    current_time[20];
+    cJSON   *entity = NULL;
+    cJSON   *name = NULL;
+    cJSON   *array = NULL;
+
+    entity_get_uuid(entity_name, uuid);
+
+    cJSON_AddItemToObject(snon_root, uuid, entity = cJSON_Parse(initial_values));
+    cJSON_AddStringToObject(entity, "eID", uuid);
+    cJSON_AddItemToObject(entity, "eN", name = cJSON_CreateObject());
+    cJSON_AddStringToObject(name, "*", entity_name);
+
+    cJSON_AddItemToObject(entity, "eV", array = cJSON_CreateArray());
+    snprintf(current_time, 19, "%llu", time_us_64());
+    cJSON_AddItemToArray(array, cJSON_CreateString(current_time));
+
+    cJSON_AddItemToObject(entity, "eT", array = cJSON_CreateArray());
+    cJSON_AddItemToArray(array, cJSON_CreateString(current_time));
+
+    cJSON_AddItemToArray(snon_list, cJSON_CreateString(uuid));
+
+    printf("\n%s\n", cJSON_Print(snon_root));
+}
+
+
+void entity_update(char* entity_name, char* updated_values)
+{
+
+
+
+}
+
+
+void entity_get_uuid(char* entity_name, char* uuid_buffer)
 {
 	uint64_t	device_id = 0;
 	SHA1_CTX    sha1_context;
@@ -54,7 +136,7 @@ void get_device_entity_uuid(char* entity_name, char* uuid_buffer)
     uint8_t		counter = 0;
     uint8_t     offset = 0;
 
-	get_device_id(&device_id);
+	device_get_id(&device_id);
 
     SHA1Init(&sha1_context);
     SHA1Update(&sha1_context, SNON_UUID, strlen(SNON_UUID));
