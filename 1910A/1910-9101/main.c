@@ -87,27 +87,17 @@ int main() {
     // ===========================================================================================
     printf("Initializing SNON entities...\n");
 
-    device_initialize("1910A 1U Rack Display");
+    snon_initialize("1910A 1U Rack Display");
+
+    // Add measurands
+    entity_register("Time Measurand", SNON_CLASS_MEASURAND, "{\"meU\":\"s\",\"meT\":\"iso8601\",\"meAq\":\"count\"}");
+    entity_register("Seconds Measurand", SNON_CLASS_MEASURAND, "{\"meU\":\"s\",\"meT\":\"numeric\",\"meAq\":\"count\",\"meUS\":{\"*\":\"s\"},\"meUSx\":{\"*\":\"seconds\"},\"meR\":\"1\",\"meAc\":\"1\"}");
+
+    // Add sensors
     entity_register("Device Time", SNON_CLASS_VALUE, NULL);
+    entity_add_relationship("Device Time", SNON_REL_MEASURAND, "Time Measurand");
     entity_add_relationship("Device Time", SNON_REL_CHILD_OF, "Device");
 
-    char* json_output = entity_name_to_json("Device Time");
-    if(json_output != NULL)
-    {
-        printf("\n%s\n", json_output);
-        free(json_output);
-    }
-    else
-    {
-        printf("Entity not found\n");
-    }
-
-    // ===========================================================================================
-    printf("Initializing real-time clock...\n");
-
-    rtc_init();
-
-    printf("RTC running: %i\n", rtc_running());
 
     // ===========================================================================================
     printf("Display startup image...\n");

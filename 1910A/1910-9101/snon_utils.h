@@ -10,14 +10,13 @@
 // ---------------------------------------------------------------------------------
 
 // Utility routines
-void device_get_id(uint64_t* id);
-void device_initialize(char* device_name);
+void snon_initialize(char* device_name);
 
-void entity_get_uuid(char* entity_name, char* uuid_buffer);
-void entity_register(char* entity_name, char* entity_class, char* initial_values);
+bool entity_register(char* entity_name, char* entity_class, char* initial_values);
 bool entity_add_relationship(char* entity_name, char* rel_type, char* rel_entity_name);
 char* entity_name_to_json(char* entity_name);
 char* entity_uuid_to_json(char* entity_uuid);
+void entity_get_uuid(char* entity_name, char* uuid_buffer);
 
 bool rtc_set_time(char* time_iso8601);
 bool rtc_counter_to_iso8601(char* buffer, uint64_t counter);

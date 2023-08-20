@@ -29,7 +29,9 @@
 bool rtc_now_to_counter(char* buffer);
 bool rtc_now_to_iso8601(char* buffer);
 bool rtc_counter_to_iso8601(char* buffer, uint64_t counter);
+void device_get_id(uint64_t* id);
 char nibble_to_hexchar(uint8_t nibble);
+bool string_only_numbers(char* the_string);
 
 
 // Local Globals
@@ -42,36 +44,15 @@ uint64_t rtc_set_epoch = 0;
 
 // =================================================================================
 
-void device_get_id(uint64_t* id)
-{
-	pico_unique_board_id_t board_id;
-	pico_get_unique_board_id(&board_id);
-	*id = *((uint64_t*)(board_id.id));
-}
-
-char nibble_to_hexchar(uint8_t nibble)
-{
-    char hex_value = '_';
-
-    if(nibble <= 9)
-    {
-        hex_value = '0' + nibble;
-    }
-    else if(nibble <= 15)
-    {
-        hex_value = 'A' + nibble - 10;
-    }
-
-    return(hex_value);
-}
-
-void device_initialize(char* entity_name)
+void snon_initialize(char* entity_name)
 {
     char    uuid[37];
     char    current_time[28];
     cJSON*  entity = NULL;
     cJSON*  name = NULL;
     cJSON*  array = NULL;
+
+    rtc_init();
 
     snon_root = cJSON_CreateObject();
     snon_list = cJSON_CreateArray();
@@ -101,6 +82,57 @@ void device_initialize(char* entity_name)
 
     // Add the entity to the master entity list
     cJSON_AddItemToArray(snon_list, cJSON_CreateString(uuid));
+}
+
+bool entity_register(char* entity_name, char* entity_class, char* initial_values)
+{
+    char    uuid[37];
+    char    current_time[28];
+    cJSON*  entity = NULL;
+    cJSON*  name = NULL;
+    cJSON*  array = NULL;
+    bool    register_result = false;
+
+    entity_get_uuid(entity_name, uuid);
+
+    if(initial_values != NULL)
+    {
+        // If additional data is passed, parse it
+        entity = cJSON_Parse(initial_values);
+    }
+    else
+    {
+        // Otherwise, create an empty object for the entity
+        entity = cJSON_CreateObject();
+    }
+
+    if(entity != NULL)
+    {
+        cJSON_AddItemToObject(snon_root, uuid, entity);
+        cJSON_AddStringToObject(entity, "eC", entity_class);
+        cJSON_AddStringToObject(entity, "eID", uuid);
+        cJSON_AddItemToObject(entity, "eN", name = cJSON_CreateObject());
+        cJSON_AddStringToObject(name, "*", entity_name);
+
+        if(entity_class == SNON_CLASS_VALUE)
+        {
+            rtc_now_to_counter(current_time);
+
+            cJSON_AddItemToObject(entity, "vT", array = cJSON_CreateArray());
+            cJSON_AddItemToArray(array, cJSON_CreateString(current_time));
+        }
+
+        if(strcmp(entity_name, "Device Time") == 0)
+        {
+            cJSON_AddItemToObject(entity, "v", array = cJSON_CreateArray());
+            cJSON_AddItemToArray(array, cJSON_CreateString(current_time));
+        }
+
+        cJSON_AddItemToArray(snon_list, cJSON_CreateString(uuid));
+        register_result = true;
+    }
+
+    return(register_result);
 }
 
 bool entity_add_relationship(char* entity_name, char* rel_type, char* rel_entity_name)
@@ -140,50 +172,6 @@ bool entity_add_relationship(char* entity_name, char* rel_type, char* rel_entity
     return(add_result);
 }
 
-void entity_register(char* entity_name, char* entity_class, char* initial_values)
-{
-    char    uuid[37];
-    char    current_time[28];
-    cJSON*  entity = NULL;
-    cJSON*  name = NULL;
-    cJSON*  array = NULL;
-
-    entity_get_uuid(entity_name, uuid);
-
-    if(initial_values != NULL)
-    {
-        // If additional data is passed, parse it
-        entity = cJSON_Parse(initial_values);
-    }
-    else
-    {
-        // Otherwise, create an empty object for the entity
-        entity = cJSON_CreateObject();
-    }
-
-    cJSON_AddItemToObject(snon_root, uuid, entity);
-    cJSON_AddStringToObject(entity, "eC", entity_class);
-    cJSON_AddStringToObject(entity, "eID", uuid);
-    cJSON_AddItemToObject(entity, "eN", name = cJSON_CreateObject());
-    cJSON_AddStringToObject(name, "*", entity_name);
-
-    if(entity_class == SNON_CLASS_VALUE)
-    {
-        rtc_now_to_counter(current_time);
-
-        cJSON_AddItemToObject(entity, "vT", array = cJSON_CreateArray());
-        cJSON_AddItemToArray(array, cJSON_CreateString(current_time));
-    }
-
-    if(strcmp(entity_name, "Device Time") == 0)
-    {
-        cJSON_AddItemToObject(entity, "v", array = cJSON_CreateArray());
-        cJSON_AddItemToArray(array, cJSON_CreateString(current_time));
-    }
-
-    cJSON_AddItemToArray(snon_list, cJSON_CreateString(uuid));
-}
-
 
 void entity_update(char* entity_name, char* updated_values)
 {
@@ -191,6 +179,132 @@ void entity_update(char* entity_name, char* updated_values)
 
 
 }
+
+char* entity_name_to_json(char* entity_name)
+{
+    char        uuid[37];
+
+    // Find the UUID for the entity
+    entity_get_uuid(entity_name, uuid);
+
+    return(entity_uuid_to_json(uuid));
+}
+
+char* entity_uuid_to_json(char* entity_uuid)
+{
+    char        uuid[37];
+    char        new_time[28];
+    char*       entity_json = NULL;
+    cJSON*      entity = NULL;
+    cJSON*      time_array = NULL;
+    cJSON*      entity_time = NULL;
+    cJSON*      value_array = NULL;
+    char*       entity_time_string = NULL;
+    uint64_t    entity_time_value = 0;
+    bool        is_time_entity = false;
+
+    // Check if it is the time entity
+    entity_get_uuid("Device Time", uuid);
+    if(strcmp(entity_uuid, uuid) == 0)
+    {
+        is_time_entity = true;
+    }
+    // Find the entity by UUID
+    entity = cJSON_GetObjectItemCaseSensitive(snon_root, entity_uuid);
+    if(entity != NULL)
+    {
+        time_array = cJSON_GetObjectItemCaseSensitive(entity, "vT");
+
+        if(time_array != NULL)
+        {
+            if(is_time_entity)
+            {
+                // Special handling for the device time entity
+                entity_time_value = time_us_64();
+                if(rtc_counter_to_iso8601(new_time, entity_time_value) == false)
+                {
+                    rtc_now_to_counter(new_time);
+                }
+
+                cJSON_ReplaceItemInArray(time_array, 0, cJSON_CreateString(new_time));
+
+                value_array = cJSON_GetObjectItemCaseSensitive(entity, "v");
+                if(time_array != NULL)
+                {
+                    cJSON_ReplaceItemInArray(value_array, 0, cJSON_CreateString(new_time));
+                }
+            }
+            else
+            {
+                entity_time = cJSON_GetArrayItem(time_array, 0);
+                entity_time_string = cJSON_GetStringValue(entity_time);
+                
+                // Only replace if it is a raw timestamp
+                if(string_only_numbers(entity_time_string))
+                {
+                    sscanf(entity_time_string, "%llu", &entity_time_value);
+                    if(rtc_counter_to_iso8601(new_time, entity_time_value) == true)
+                    {
+                        cJSON_ReplaceItemInArray(time_array, 0, cJSON_CreateString(new_time));
+                    }
+                }
+            }
+        }
+    }
+
+    if(entity != NULL)
+    {
+        entity_json = cJSON_Print(entity);
+    }
+
+    return(entity_json);
+}
+
+
+void entity_get_uuid(char* entity_name, char* uuid_buffer)
+{
+    uint64_t    device_id = 0;
+    SHA1_CTX    sha1_context;
+    uint8_t     sha1_result[20];
+    uint8_t     counter = 0;
+    uint8_t     offset = 0;
+
+    device_get_id(&device_id);
+
+    SHA1Init(&sha1_context);
+    SHA1Update(&sha1_context, SNON_UUID, strlen(SNON_UUID));
+    SHA1Update(&sha1_context, &device_id, 8);
+    SHA1Update(&sha1_context, entity_name, strlen(entity_name));
+    SHA1Final(&sha1_result, &sha1_context);
+
+    uuid_buffer[36] = 0;
+
+    while(counter < 16)
+    {
+        if(counter == 4 || counter == 6 || counter == 8 || counter == 10)
+        {
+            uuid_buffer[(counter * 2) + offset] = '-';
+            offset = offset + 1;
+        }
+
+        uuid_buffer[(counter * 2) + offset] = nibble_to_hexchar(sha1_result[counter] >> 4);
+        uuid_buffer[(counter * 2) + 1 + offset] = nibble_to_hexchar(sha1_result[counter] & 0x0F);
+
+        if(counter == 6)
+        {
+            uuid_buffer[(counter * 2) + offset] = '5';
+        }
+
+        if(counter == 8)
+        {
+            uuid_buffer[(counter * 2) + offset] = nibble_to_hexchar(((sha1_result[counter] >> 4) & 0b1011) | 0b1000);
+        }
+
+        counter = counter + 1;
+    }
+}
+
+// =================================================================================
 
 bool rtc_now_to_counter(char* buffer)
 {
@@ -315,117 +429,46 @@ bool rtc_counter_to_iso8601(char* buffer, uint64_t counter)
     return(get_time_valid);
 }
 
-char* entity_name_to_json(char* entity_name)
+void device_get_id(uint64_t* id)
 {
-    char        uuid[37];
-
-    // Find the UUID for the entity
-    entity_get_uuid(entity_name, uuid);
-
-    return(entity_uuid_to_json(uuid));
+    pico_unique_board_id_t board_id;
+    pico_get_unique_board_id(&board_id);
+    *id = *((uint64_t*)(board_id.id));
 }
 
-char* entity_uuid_to_json(char* entity_uuid)
+char nibble_to_hexchar(uint8_t nibble)
 {
-    char        uuid[37];
-    char        new_time[28];
-    char*       entity_json = NULL;
-    cJSON*      entity = NULL;
-    cJSON*      time_array = NULL;
-    cJSON*      entity_time = NULL;
-    cJSON*      value_array = NULL;
-    char*       entity_time_string = NULL;
-    uint64_t    entity_time_value = 0;
-    bool        is_time_entity = false;
+    char hex_value = '_';
 
-    // Check if it is the time entity
-    entity_get_uuid("Device Time", uuid);
-    if(strcmp(entity_uuid, uuid) == 0)
+    if(nibble <= 9)
     {
-        is_time_entity = true;
+        hex_value = '0' + nibble;
+    }
+    else if(nibble <= 15)
+    {
+        hex_value = 'A' + nibble - 10;
     }
 
-    // Find the entity by UUID
-    entity = cJSON_GetObjectItemCaseSensitive(snon_root, entity_uuid);
-    if(entity != NULL)
-    {
-        time_array = cJSON_GetObjectItemCaseSensitive(entity, "vT");
+    return(hex_value);
+}
 
-        if(time_array != NULL)
+bool string_only_numbers(char* the_string)
+{
+    bool        only_numbers = true;
+    uint16_t    string_counter = 0;
+
+    while(the_string[string_counter] != 0 && only_numbers == true)
+    {
+        if(the_string[string_counter] < '0' || the_string[string_counter] > '9')
         {
-            entity_time = cJSON_GetArrayItem(time_array, 0);
-            entity_time_string = cJSON_GetStringValue(entity_time);
-            sscanf(entity_time_string, "%llu", &entity_time_value);
-
-            if(is_time_entity)
-            {
-                entity_time_value = time_us_64();
-            }
-
-            if(rtc_counter_to_iso8601(new_time, entity_time_value))
-            {
-                cJSON_ReplaceItemInArray(time_array, 0, cJSON_CreateString(new_time));
-
-                if(is_time_entity)
-                {
-                    value_array = cJSON_GetObjectItemCaseSensitive(entity, "v");
-                    if(time_array != NULL)
-                    {
-                        cJSON_ReplaceItemInArray(value_array, 0, cJSON_CreateString(new_time));
-                    }
-                }
-            }
+            only_numbers = false;
         }
+
+        string_counter = string_counter + 1;
     }
 
-    if(entity != NULL)
-    {
-        entity_json = cJSON_Print(entity);
-    }
-
-    return(entity_json);
+    return(only_numbers);
 }
 
 
-void entity_get_uuid(char* entity_name, char* uuid_buffer)
-{
-	uint64_t	device_id = 0;
-	SHA1_CTX    sha1_context;
-    uint8_t     sha1_result[20];
-    uint8_t		counter = 0;
-    uint8_t     offset = 0;
 
-	device_get_id(&device_id);
-
-    SHA1Init(&sha1_context);
-    SHA1Update(&sha1_context, SNON_UUID, strlen(SNON_UUID));
-    SHA1Update(&sha1_context, &device_id, 8);
-    SHA1Update(&sha1_context, entity_name, strlen(entity_name));
-    SHA1Final(&sha1_result, &sha1_context);
-
-    uuid_buffer[36] = 0;
-
-    while(counter < 16)
-    {
-        if(counter == 4 || counter == 6 || counter == 8 || counter == 10)
-        {
-            uuid_buffer[(counter * 2) + offset] = '-';
-            offset = offset + 1;
-        }
-
-        uuid_buffer[(counter * 2) + offset] = nibble_to_hexchar(sha1_result[counter] >> 4);
-        uuid_buffer[(counter * 2) + 1 + offset] = nibble_to_hexchar(sha1_result[counter] & 0x0F);
-
-        if(counter == 6)
-        {
-            uuid_buffer[(counter * 2) + offset] = '5';
-        }
-
-        if(counter == 8)
-        {
-            uuid_buffer[(counter * 2) + offset] = nibble_to_hexchar(((sha1_result[counter] >> 4) & 0b1011) | 0b1000);
-        }
-
-        counter = counter + 1;
-    }
-}
