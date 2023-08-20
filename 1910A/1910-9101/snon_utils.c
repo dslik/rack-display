@@ -11,9 +11,11 @@
 
 // System Headers
 #include <stdio.h>
+#include <time.h>
 
 // Pico Headers
 #include "pico/unique_id.h"
+#include "hardware/rtc.h"
 
 // Local Headers
 #include "snon_utils.h"
@@ -23,9 +25,19 @@
 // Local Constants
 #define SNON_UUID   "C3A4DD12-EFD4-537A-885C-50EC74A2CB12"
 
+// Local Prototypes
+bool rtc_now_to_counter(char* buffer);
+bool rtc_now_to_iso8601(char* buffer);
+bool rtc_counter_to_iso8601(char* buffer, uint64_t counter);
+char nibble_to_hexchar(uint8_t nibble);
+
+
 // Local Globals
-cJSON   *snon_root = NULL;
-cJSON   *snon_list = NULL;
+cJSON*   snon_root = NULL;
+cJSON*   snon_list = NULL;
+
+uint64_t rtc_set_count = 0;
+uint64_t rtc_set_epoch = 0;
 
 
 // =================================================================================
@@ -56,16 +68,16 @@ char nibble_to_hexchar(uint8_t nibble)
 void device_initialize(char* entity_name)
 {
     char    uuid[37];
-    char    current_time[20];
-    cJSON   *entity = NULL;
-    cJSON   *name = NULL;
-    cJSON   *array = NULL;
+    char    current_time[28];
+    cJSON*  entity = NULL;
+    cJSON*  name = NULL;
+    cJSON*  array = NULL;
 
     snon_root = cJSON_CreateObject();
     snon_list = cJSON_CreateArray();
 
     // Create the device entity
-    entity_get_uuid("device", uuid);
+    entity_get_uuid("Device", uuid);
     cJSON_AddItemToObject(snon_root, uuid, entity = cJSON_CreateObject());
     cJSON_AddStringToObject(entity, "eC", "device");
     cJSON_AddStringToObject(entity, "eID", uuid);
@@ -76,16 +88,16 @@ void device_initialize(char* entity_name)
     cJSON_AddItemToArray(snon_list, cJSON_CreateString(uuid));
 
     // Create the entity list entity
-    entity_get_uuid("entities", uuid);
+    entity_get_uuid("Entities", uuid);
     cJSON_AddItemToObject(snon_root, uuid, entity = cJSON_CreateObject());
     cJSON_AddStringToObject(entity, "eC", "value");
     cJSON_AddStringToObject(entity, "eID", uuid);
     cJSON_AddItemToObject(entity, "eN", name = cJSON_CreateObject());
     cJSON_AddStringToObject(name, "*", "Defined Entities");
-    cJSON_AddItemToObject(entity, "eV", snon_list);
+    cJSON_AddItemToObject(entity, "v", snon_list);
 
-    cJSON_AddItemToObject(entity, "eT", array = cJSON_CreateArray());
-    snprintf(current_time, 19, "%llu", time_us_64());
+    cJSON_AddItemToObject(entity, "vT", array = cJSON_CreateArray());
+    rtc_now_to_counter(current_time);
     cJSON_AddItemToArray(array, cJSON_CreateString(current_time));
 
     // Add the entity to the master entity list
@@ -95,10 +107,10 @@ void device_initialize(char* entity_name)
 void entity_register(char* entity_name, char* initial_values)
 {
     char    uuid[37];
-    char    current_time[20];
-    cJSON   *entity = NULL;
-    cJSON   *name = NULL;
-    cJSON   *array = NULL;
+    char    current_time[28];
+    cJSON*  entity = NULL;
+    cJSON*  name = NULL;
+    cJSON*  array = NULL;
 
     entity_get_uuid(entity_name, uuid);
 
@@ -107,16 +119,14 @@ void entity_register(char* entity_name, char* initial_values)
     cJSON_AddItemToObject(entity, "eN", name = cJSON_CreateObject());
     cJSON_AddStringToObject(name, "*", entity_name);
 
-    cJSON_AddItemToObject(entity, "eV", array = cJSON_CreateArray());
-    snprintf(current_time, 19, "%llu", time_us_64());
+    cJSON_AddItemToObject(entity, "v", array = cJSON_CreateArray());
+    rtc_now_to_counter(current_time);
     cJSON_AddItemToArray(array, cJSON_CreateString(current_time));
 
-    cJSON_AddItemToObject(entity, "eT", array = cJSON_CreateArray());
+    cJSON_AddItemToObject(entity, "vT", array = cJSON_CreateArray());
     cJSON_AddItemToArray(array, cJSON_CreateString(current_time));
 
     cJSON_AddItemToArray(snon_list, cJSON_CreateString(uuid));
-
-    printf("\n%s\n", cJSON_Print(snon_root));
 }
 
 
@@ -125,6 +135,198 @@ void entity_update(char* entity_name, char* updated_values)
 
 
 
+}
+
+bool rtc_now_to_counter(char* buffer)
+{
+    snprintf(buffer, 28, "%llu", time_us_64());
+
+    return(true);
+}
+
+bool rtc_now_to_iso8601(char* buffer)
+{
+    bool        get_time_valid = false;
+    datetime_t  t;
+
+    // Length of ISO8601 string used here is 28 characters:
+    // "YYYY-MM-DDTHH:MM:SS.123456Z"
+    //  123456789012345678901234567
+
+    get_time_valid = rtc_get_datetime(&t);
+
+    if(get_time_valid == true)
+    {
+        snprintf(buffer, 28, "%04d-%02d-%02dT%02d:%02d:%02d.%06lluZ", t.year, t.month, t.day, t.hour, t.min, t.sec, (time_us_64() % 1000000));
+    }
+    
+    return(get_time_valid);
+}
+
+bool rtc_set_time(char* time_iso8601)
+{
+    unsigned int    year = 0;
+    unsigned int    month = 0;
+    unsigned int    day = 0;
+    unsigned int    hours = 0;
+    unsigned int    minutes = 0;
+    unsigned int    seconds = 0;
+    bool            set_valid = true;
+    uint64_t        before_count = 0;
+    uint64_t        after_count = 0;
+    datetime_t      time_pico;
+    struct tm       time_c;
+
+    sscanf(time_iso8601, "%4u-%2u-%2uT%2u:%2u:%2uZ", &year, &month, &day, &hours, &minutes, &seconds);
+    if(year < 2022 || year > 2055)
+    {
+        set_valid = false;
+    }
+    else if(month < 1 || month > 12)
+    {
+        set_valid = false;
+    }
+    else if(day < 1 || day > 31)
+    {
+        set_valid = false;
+    }
+    else if(hours < 0 || hours > 23)
+    {
+        set_valid = false;
+    }
+    else if(minutes < 0 || minutes > 59)
+    {
+        set_valid = false;
+    }
+    else if(seconds < 0 || seconds > 59)
+    {
+        set_valid = false;
+    }
+    
+    if(set_valid == true)
+    {
+        time_pico.year = time_c.tm_year = year;
+        time_pico.month = time_c.tm_mon = month;
+        time_pico.day = time_c.tm_mday = day;
+        time_pico.hour = time_c.tm_hour = hours;
+        time_pico.min = time_c.tm_min = minutes;
+        time_pico.sec = time_c.tm_sec = seconds;
+        time_pico.dotw = 0;
+        time_c.tm_isdst = -1;
+
+        before_count = time_us_64();
+        set_valid = rtc_set_datetime(&time_pico);
+        after_count = time_us_64();
+
+        rtc_set_count = after_count - ((after_count - before_count) / 2);
+        rtc_set_epoch = (uint64_t) mktime(&time_c);
+
+        printf("\nsc = %llu, offset = %llu", rtc_set_count, rtc_set_epoch);
+
+
+    }
+
+    return(set_valid);
+}
+
+bool rtc_counter_to_iso8601(char* buffer, uint64_t counter)
+{
+    bool        get_time_valid = false;
+    struct tm   time;
+    int64_t     offset_counter = 0;
+    uint64_t    epoch_counter = 0;
+    uint64_t    epoch_counter_secs = 0;
+
+    // Length of ISO8601 string used here is 28 characters:
+    // "YYYY-MM-DDTHH:MM:SS.123456Z"
+    //  123456789012345678901234567
+
+    if(rtc_running())
+    {
+        offset_counter = counter - rtc_set_count;
+        epoch_counter = (rtc_set_epoch * 1000000) + offset_counter;
+        epoch_counter_secs = epoch_counter / 1000000;
+
+        gmtime_r(&epoch_counter_secs, &time);
+
+        snprintf(buffer, 28, "%04d-%02d-%02dT%02d:%02d:%02d.%06lluZ",
+                 time.tm_year, time.tm_mon, time.tm_mday,
+                 time.tm_hour, time.tm_min, time.tm_sec,
+                 (epoch_counter % 1000000));
+
+        get_time_valid = true;
+    }
+    
+    return(get_time_valid);
+}
+
+char* entity_name_to_json(char* entity_name)
+{
+    char        uuid[37];
+
+    // Find the UUID for the entity
+    entity_get_uuid(entity_name, uuid);
+
+    return(entity_uuid_to_json(uuid));
+}
+
+char* entity_uuid_to_json(char* entity_uuid)
+{
+    char        uuid[37];
+    char        new_time[28];
+    char*       entity_json = NULL;
+    cJSON*      entity = NULL;
+    cJSON*      time_array = NULL;
+    cJSON*      entity_time = NULL;
+    cJSON*      value_array = NULL;
+    char*       entity_time_string = NULL;
+    uint64_t    entity_time_value = 0;
+    bool        is_time_entity = false;
+
+    // Check if it is the time entity
+    entity_get_uuid("Device Time", uuid);
+    if(strcmp(entity_uuid, uuid) == 0)
+    {
+        is_time_entity = true;
+    }
+
+    // Find the entity by UUID
+    entity = cJSON_GetObjectItemCaseSensitive(snon_root, entity_uuid);
+    if(entity != NULL)
+    {
+        time_array = cJSON_GetObjectItemCaseSensitive(entity, "vT");
+
+        if(time_array != NULL)
+        {
+            entity_time = cJSON_GetArrayItem(time_array, 0);
+            entity_time_string = cJSON_GetStringValue(entity_time);
+            sscanf(entity_time_string, "%llu", &entity_time_value);
+
+            if(is_time_entity)
+            {
+                entity_time_value = time_us_64();
+            }
+
+            if(rtc_counter_to_iso8601(new_time, entity_time_value))
+            {
+                cJSON_ReplaceItemInArray(time_array, 0, cJSON_CreateString(new_time));
+            }
+        }
+
+        if(is_time_entity)
+        {
+            value_array = cJSON_GetObjectItemCaseSensitive(entity, "v");
+            cJSON_ReplaceItemInArray(value_array, 0, cJSON_CreateString(new_time));
+        }
+
+    }
+
+    if(entity != NULL)
+    {
+        entity_json = cJSON_Print(entity);
+    }
+
+    return(entity_json);
 }
 
 

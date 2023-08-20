@@ -90,6 +90,17 @@ int main() {
     device_initialize("1910A 1U Rack Display");
     entity_register("Device Time", "{\"eC\" : \"value\"}");
 
+    char* json_output = entity_name_to_json("Device Time");
+    if(json_output != NULL)
+    {
+        printf("\n%s\n", json_output);
+        free(json_output);
+    }
+    else
+    {
+        printf("Entity not found\n");
+    }
+
     // ===========================================================================================
     printf("Initializing real-time clock...\n");
 
@@ -128,16 +139,16 @@ int main() {
         {
             if(strcmp(command, "help") == 0)
             {
-                uart_puts(uart1, "\r\nCommands:");
-                uart_puts(uart1, "\r\n\"help\"            - Displays list of commands");
-                uart_puts(uart1, "\r\n\"clear\"           - Clear the serial terminal");
-                uart_puts(uart1, "\r\n\"list entities\"   - List device SNON entities");
-                uart_puts(uart1, "\r\n\"get time\"        - Get the current time");
-                uart_puts(uart1, "\r\n\"set time\"        - Set the current time");
-                uart_puts(uart1, "\r\n\"display refresh\" - Refresh the display");
-                uart_puts(uart1, "\r\n\"display clear\"   - Set the entire frame buffer to black");
-                uart_puts(uart1, "\r\n\"display dump\"    - Dump the contents of the display to the terminal");
-                uart_puts(uart1, "\r\n\"set pixel x,y to r g b\"   - Set a pixel at x,y to r g b");
+                uart_puts(uart1, "\nCommands:");
+                uart_puts(uart1, "\n\"help\"            - Displays list of commands");
+                uart_puts(uart1, "\n\"clear\"           - Clear the serial terminal");
+                uart_puts(uart1, "\n\"cat <entity>\"    - Display the value of a registered entity");
+                uart_puts(uart1, "\n\"get time\"        - Get the current time");
+                uart_puts(uart1, "\n\"set time\"        - Set the current time");
+                uart_puts(uart1, "\n\"display refresh\" - Refresh the display");
+                uart_puts(uart1, "\n\"display clear\"   - Set the entire frame buffer to black");
+                uart_puts(uart1, "\n\"display dump\"    - Dump the contents of the display to the terminal");
+                uart_puts(uart1, "\n\"set pixel x,y to r g b\"   - Set a pixel at x,y to r g b");
                 uart_command_clear();
             }
             else if(strcmp(command, "clear") == 0)
@@ -145,65 +156,41 @@ int main() {
                 uart_puts(uart1, "\033[2J");
                 uart_command_clear();
             }
-            else if(strcmp(command, "list entities") == 0)
+            else if(strncmp(command, "cat ", 4) == 0)
             {
-                get_time_valid = rtc_get_datetime(&t);
+                char* json_output = entity_name_to_json((char*) &(command[4]));
 
-                if(get_time_valid == true)
+                if(json_output == NULL)
                 {
-                    uart_puts(uart1, "\r\n{\"eID\" : \"3F\",");
-                    uart_puts(uart1, "\r\n  \"v\"  : [ \"3F\", \"0\", \"9F\" ],");
-                    snprintf(snprintf_buffer, SNPRINTF_BUFFER_SIZE, "\r\n  \"vT\" : [ \"%04d-%02d-%02dT%02d:%02d:%02d.%06lluZ\" ]", t.year, t.month, t.day, t.hour, t.min, t.sec, (time_us_64() % 1000000));
-                    uart_puts(uart1, snprintf_buffer);
-                    uart_puts(uart1, "\r\n}");
+                    json_output = entity_uuid_to_json((char*) &(command[4]));
+                }
+
+                if(json_output != NULL)
+                {
+                    uart_puts(uart1, "\n");
+                    uart_puts(uart1, json_output);
+                    uart_puts(uart1, "\n");
+                    free(json_output);
                 }
                 else
                 {
-                    uart_puts(uart1, "\r\nRTC not running. Use the \"set time\" command to set the current time.");
-                }
-
-                uart_command_clear();
-            }
-            else if(strcmp(command, "get id") == 0)
-            {
-                get_time_valid = rtc_get_datetime(&t);
-
-                if(get_time_valid == true)
-                {
-                    uart_puts(uart1, "\r\n{\"eID\" : \"542E71CE-8376-485E-B571-222F54A6A6D0\",");
-                    uart_puts(uart1, "\r\n  \"eC\" : \"value\",");
-                    uart_puts(uart1, "\r\n  \"eN\" : { \"en\" : \"Device unique ID\" },");
-                    uart_puts(uart1, "\r\n  \"v\"  : [ \"");
-
-                    uint64_t id = 0;
-                    device_get_id(&id);
-                    snprintf(snprintf_buffer, SNPRINTF_BUFFER_SIZE, "%016llX", id);
-                    uart_puts(uart1, snprintf_buffer);
-
-                    uart_puts(uart1, "\" ],");
-                    snprintf(snprintf_buffer, SNPRINTF_BUFFER_SIZE, "\r\n  \"vT\" : [ \"%04d-%02d-%02dT%02d:%02d:%02d.%06lluZ\" ]", t.year, t.month, t.day, t.hour, t.min, t.sec, (time_us_64() % 1000000));
-                    uart_puts(uart1, snprintf_buffer);
-                    uart_puts(uart1, "\r\n}");
-                }
-                else
-                {
-                    uart_puts(uart1, "\r\nRTC not running. Use the \"set time\" command to set the current time.");
+                    uart_puts(uart1, "\nEntity not found\n");
                 }
 
                 uart_command_clear();
             }
             else if(strcmp(command, "get time") == 0)
             {
-                get_time_valid = rtc_get_datetime(&t);
+                get_time_valid = rtc_counter_to_iso8601(snprintf_buffer, time_us_64());
 
                 if(get_time_valid == true)
                 {
-                    snprintf(snprintf_buffer, SNPRINTF_BUFFER_SIZE, "\r\n%04d-%02d-%02dT%02d:%02d:%02d.%06lluZ", t.year, t.month, t.day, t.hour, t.min, t.sec, (time_us_64() % 1000000));
+                    uart_puts(uart1, "\nThe time is: ");
                     uart_puts(uart1, snprintf_buffer);
                 }
                 else
                 {
-                    uart_puts(uart1, "\r\nRTC not running. Use the \"set time\" command to set the current time.");
+                    uart_puts(uart1, "\nRTC not running. Use the \"set time\" command to set the current time.");
                 }
                 uart_command_clear();
             }
@@ -220,32 +207,32 @@ int main() {
                 sscanf(command, "set time %4u-%2u-%2uT%2u:%2u:%2uZ", &year, &month, &day, &hours, &minutes, &seconds);
                 if(year < 2022 || year > 2055)
                 {
-                    snprintf(snprintf_buffer, SNPRINTF_BUFFER_SIZE, "\r\nInvalid year %04d. Must be between 2022 and 2055", year);
+                    snprintf(snprintf_buffer, SNPRINTF_BUFFER_SIZE, "\nInvalid year %04d. Must be between 2022 and 2055", year);
                     uart_puts(uart1, snprintf_buffer);
                 }
                 else if(month < 1 || month > 12)
                 {
-                    snprintf(snprintf_buffer, SNPRINTF_BUFFER_SIZE, "\r\nInvalid month %02d. Must be between 1 and 12", month);
+                    snprintf(snprintf_buffer, SNPRINTF_BUFFER_SIZE, "\nInvalid month %02d. Must be between 1 and 12", month);
                     uart_puts(uart1, snprintf_buffer);
                 }
                 else if(day < 1 || day > 31)
                 {
-                    snprintf(snprintf_buffer, SNPRINTF_BUFFER_SIZE, "\r\nInvalid day %02d. Must be between 1 and 31", day);
+                    snprintf(snprintf_buffer, SNPRINTF_BUFFER_SIZE, "\nInvalid day %02d. Must be between 1 and 31", day);
                     uart_puts(uart1, snprintf_buffer);
                 }
                 else if(hours < 0 || hours > 23)
                 {
-                    snprintf(snprintf_buffer, SNPRINTF_BUFFER_SIZE, "\r\nInvalid hour %02d. Must be between 0 and 23", hours);
+                    snprintf(snprintf_buffer, SNPRINTF_BUFFER_SIZE, "\nInvalid hour %02d. Must be between 0 and 23", hours);
                     uart_puts(uart1, snprintf_buffer);
                 }
                 else if(minutes < 0 || minutes > 59)
                 {
-                    snprintf(snprintf_buffer, SNPRINTF_BUFFER_SIZE, "\r\nInvalid minute %02d. Must be between 0 and 59", minutes);
+                    snprintf(snprintf_buffer, SNPRINTF_BUFFER_SIZE, "\nInvalid minute %02d. Must be between 0 and 59", minutes);
                     uart_puts(uart1, snprintf_buffer);
                 }
                 else if(seconds < 0 || seconds > 59)
                 {
-                    snprintf(snprintf_buffer, SNPRINTF_BUFFER_SIZE, "\r\nInvalid second %02d. Must be between 0 and 59", hours);
+                    snprintf(snprintf_buffer, SNPRINTF_BUFFER_SIZE, "\nInvalid second %02d. Must be between 0 and 59", hours);
                     uart_puts(uart1, snprintf_buffer);
                 }
                 else
@@ -260,17 +247,17 @@ int main() {
 
                     snprintf(snprintf_buffer, SNPRINTF_BUFFER_SIZE, "%04d-%02d-%02dT%02d:%02d:%02dZ", t.year, t.month, t.day, t.hour, t.min, t.sec);
 
-                    set_valid = rtc_set_datetime(&t);
+                    set_valid = rtc_set_time(snprintf_buffer);
                     sleep_us(64);
 
                     if(set_valid == true)
                     {
-                        uart_puts(uart1, "\r\nTime set to ");
+                        uart_puts(uart1, "\nTime set to ");
                         uart_puts(uart1, snprintf_buffer);
                     }
                     else
                     {
-                        uart_puts(uart1, "\r\nError setting time to ");
+                        uart_puts(uart1, "\nError setting time to ");
                         uart_puts(uart1, snprintf_buffer);
                     }
                 }
@@ -279,16 +266,16 @@ int main() {
             }
             else if(strcmp(command, "display refresh") == 0)
             {
-                uart_puts(uart1, "\r\nRefreshing display...");
+                uart_puts(uart1, "\nRefreshing display...");
                 fb_display();
-                uart_puts(uart1, "\r\nDone.");
+                uart_puts(uart1, "\nDone.");
                 uart_command_clear();
             }
             else if(strcmp(command, "display clear") == 0)
             {
-                uart_puts(uart1, "\r\nClearing display...");
+                uart_puts(uart1, "\nClearing display...");
                 fb_display_clear();
-                uart_puts(uart1, "\r\nDone.");
+                uart_puts(uart1, "\nDone.");
                 uart_command_clear();
             }
             else if(strcmp(command, "display dump") == 0)
@@ -297,10 +284,10 @@ int main() {
 
                 if(get_time_valid == true)
                 {
-                    uart_puts(uart1, "\r\n{\"eID\" : \"542E71CE-8376-485E-B571-222F54A6A6D0\",");
-                    uart_puts(uart1, "\r\n  \"eC\" : \"value\",");
-                    uart_puts(uart1, "\r\n  \"eN\" : { \"en\" : \"Framebuffer contents\" },");
-                    uart_puts(uart1, "\r\n  \"v\"  : [ \"");
+                    uart_puts(uart1, "\n{\"eID\" : \"542E71CE-8376-485E-B571-222F54A6A6D0\",");
+                    uart_puts(uart1, "\n  \"eC\" : \"value\",");
+                    uart_puts(uart1, "\n  \"eN\" : { \"en\" : \"Framebuffer contents\" },");
+                    uart_puts(uart1, "\n  \"v\"  : [ \"");
 
                     uint16_t    x_counter = 0;
                     uint16_t    y_counter = 0;
@@ -323,13 +310,13 @@ int main() {
                     }
 
                     uart_puts(uart1, "\" ],");
-                    snprintf(snprintf_buffer, SNPRINTF_BUFFER_SIZE, "\r\n  \"vT\" : [ \"%04d-%02d-%02dT%02d:%02d:%02d.%06lluZ\" ]", t.year, t.month, t.day, t.hour, t.min, t.sec, (time_us_64() % 1000000));
+                    snprintf(snprintf_buffer, SNPRINTF_BUFFER_SIZE, "\n  \"vT\" : [ \"%04d-%02d-%02dT%02d:%02d:%02d.%06lluZ\" ]", t.year, t.month, t.day, t.hour, t.min, t.sec, (time_us_64() % 1000000));
                     uart_puts(uart1, snprintf_buffer);
-                    uart_puts(uart1, "\r\n}");
+                    uart_puts(uart1, "\n}");
                 }
                 else
                 {
-                    uart_puts(uart1, "\r\nRTC not running. Use the \"set time\" command to set the current time.");
+                    uart_puts(uart1, "\nRTC not running. Use the \"set time\" command to set the current time.");
                 }
 
                 uart_command_clear();
@@ -343,14 +330,14 @@ int main() {
                 int b = 0;
 
                 sscanf(command, "set pixel %i,%i to %i %i %i", &x, &y, &r, &g, &b);
-                uart_puts(uart1, "\r\nSetting pixel...");
-                printf("\r\nSetting pixel at %i, %i to R: %i, G: %i, B: %i", x, y, r, g, b);
+                uart_puts(uart1, "\nSetting pixel...");
+                printf("\nSetting pixel at %i, %i to R: %i, G: %i, B: %i", x, y, r, g, b);
                 fb_set_grb(x, y, urgb_u32(r, g, b));
                 uart_command_clear();
             }
             else
             {
-                uart_puts(uart1, "\r\nUnknown command\r\n");
+                uart_puts(uart1, "\nUnknown command\n");
                 uart_command_clear();
             }
         }
