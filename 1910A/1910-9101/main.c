@@ -151,7 +151,8 @@ int main() {
                 uart_puts(uart1, "\nCommands:");
                 uart_puts(uart1, "\n\"help\"            - Displays list of commands");
                 uart_puts(uart1, "\n\"clear\"           - Clear the serial terminal");
-                uart_puts(uart1, "\n\"cat <entity>\"    - Display the value of a registered entity");
+                uart_puts(uart1, "\n\"ls\"              - List SNON entites");
+                uart_puts(uart1, "\n\"cat <entity>\"    - Display the value of an SNON entity");
                 uart_puts(uart1, "\n\"get time\"        - Get the current time");
                 uart_puts(uart1, "\n\"set time\"        - Set the current time");
                 uart_puts(uart1, "\n\"display refresh\" - Refresh the display");
@@ -174,6 +175,44 @@ int main() {
                     uart_puts(uart1, "\n");
                     uart_puts(uart1, json_output);
                     uart_puts(uart1, "\n");
+                    free(json_output);
+                }
+
+                uart_command_clear();
+            }
+            else if(strcmp(command, "{}") == 0)
+            {
+                char*       json_output = entity_name_to_values("Entities");
+                char*       entity_output = NULL;
+                uint16_t    counter = 0;
+                uint16_t    json_output_length = 0;
+
+                if(json_output != NULL)
+                {
+                    json_output_length = strlen(json_output);
+                    uart_puts(uart1, "\n[");
+
+                    while(json_output[counter] != 0)
+                    {
+                        if(json_output[counter] == '"')
+                        {
+                            sscanf(&json_output[counter + 1], "%36s", &snprintf_buffer);
+                            entity_output = entity_uuid_to_json(snprintf_buffer);
+                            uart_puts(uart1, entity_output);
+                            free(entity_output);
+                            
+                            if(counter + 50 < json_output_length)
+                            {
+                                uart_puts(uart1, ", ");
+                            }
+
+                            counter = counter + 37;
+                        }
+
+                        counter = counter + 1;
+                    }
+
+                    uart_puts(uart1, "]");
                     free(json_output);
                 }
 
