@@ -32,6 +32,7 @@ bool rtc_counter_to_iso8601(char* buffer, uint64_t counter);
 void device_get_id(uint64_t* id);
 char nibble_to_hexchar(uint8_t nibble);
 bool string_only_numbers(char* the_string);
+void string_char_sub(char* the_string, char orig, char sub);
 
 
 // Local Globals
@@ -122,7 +123,8 @@ bool entity_register(char* entity_name, char* entity_class, char* initial_values
             cJSON_AddItemToArray(array, cJSON_CreateString(current_time));
         }
 
-        if(strcmp(entity_name, "Device Time") == 0)
+        if(strcmp(entity_name, "Device Time") == 0 ||
+           strcmp(entity_name, "Device Uptime") == 0)
         {
             cJSON_AddItemToObject(entity, "v", array = cJSON_CreateArray());
             cJSON_AddItemToArray(array, cJSON_CreateString(current_time));
@@ -202,6 +204,7 @@ char* entity_uuid_to_json(char* entity_uuid)
     char*       entity_time_string = NULL;
     uint64_t    entity_time_value = 0;
     bool        is_time_entity = false;
+    bool        is_uptime_entity = false;
 
     // Check if it is the time entity
     entity_get_uuid("Device Time", uuid);
@@ -209,6 +212,13 @@ char* entity_uuid_to_json(char* entity_uuid)
     {
         is_time_entity = true;
     }
+
+    entity_get_uuid("Device Uptime", uuid);
+    if(strcmp(entity_uuid, uuid) == 0)
+    {
+        is_uptime_entity = true;
+    }
+
     // Find the entity by UUID
     entity = cJSON_GetObjectItemCaseSensitive(snon_root, entity_uuid);
     if(entity != NULL)
@@ -217,7 +227,7 @@ char* entity_uuid_to_json(char* entity_uuid)
 
         if(time_array != NULL)
         {
-            if(is_time_entity)
+            if(is_time_entity || is_uptime_entity)
             {
                 // Special handling for the device time entity
                 entity_time_value = time_us_64();
@@ -231,6 +241,11 @@ char* entity_uuid_to_json(char* entity_uuid)
                 value_array = cJSON_GetObjectItemCaseSensitive(entity, "v");
                 if(time_array != NULL)
                 {
+                    if(is_uptime_entity)
+                    {
+                        rtc_now_to_counter(new_time);
+                    }
+
                     cJSON_ReplaceItemInArray(value_array, 0, cJSON_CreateString(new_time));
                 }
             }
@@ -260,6 +275,38 @@ char* entity_uuid_to_json(char* entity_uuid)
     return(entity_json);
 }
 
+char* entity_name_to_values(char* entity_name)
+{
+    char        uuid[37];
+
+    // Find the UUID for the entity
+    entity_get_uuid(entity_name, uuid);
+
+    return(entity_uuid_to_values(uuid));
+}
+
+char* entity_uuid_to_values(char* entity_uuid)
+{
+    char*       entity_json = NULL;
+    cJSON*      entity = NULL;
+    cJSON*      value_array = NULL;
+
+    // Find the entity by UUID
+    entity = cJSON_GetObjectItemCaseSensitive(snon_root, entity_uuid);
+    if(entity != NULL)
+    {
+        value_array = cJSON_GetObjectItemCaseSensitive(entity, "v");
+
+        if(value_array != NULL)
+        {
+            entity_json = cJSON_Print(value_array);
+
+            string_char_sub(entity_json, ' ', '\n');
+        }
+    }
+
+    return(entity_json);
+}
 
 void entity_get_uuid(char* entity_name, char* uuid_buffer)
 {
@@ -468,6 +515,21 @@ bool string_only_numbers(char* the_string)
     }
 
     return(only_numbers);
+}
+
+void string_char_sub(char* the_string, char orig, char sub)
+{
+    uint16_t    string_counter = 0;
+
+    while(the_string[string_counter] != 0)
+    {
+        if(the_string[string_counter] == orig)
+        {
+            the_string[string_counter] = sub;
+        }
+
+        string_counter = string_counter + 1;
+    }
 }
 
 

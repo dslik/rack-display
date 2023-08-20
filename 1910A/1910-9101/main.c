@@ -94,10 +94,28 @@ int main() {
     entity_register("Seconds Measurand", SNON_CLASS_MEASURAND, "{\"meU\":\"s\",\"meT\":\"numeric\",\"meAq\":\"count\",\"meUS\":{\"*\":\"s\"},\"meUSx\":{\"*\":\"seconds\"},\"meR\":\"1\",\"meAc\":\"1\"}");
 
     // Add sensors
-    entity_register("Device Time", SNON_CLASS_VALUE, NULL);
-    entity_add_relationship("Device Time", SNON_REL_MEASURAND, "Time Measurand");
-    entity_add_relationship("Device Time", SNON_REL_CHILD_OF, "Device");
+    entity_register("Device Time Sensor", SNON_CLASS_SENSOR, NULL);
+    entity_add_relationship("Device Time Sensor", SNON_REL_CHILD_OF, "Device");
+    entity_add_relationship("Device Time Sensor", SNON_REL_MEASURAND, "Time Measurand");
 
+    entity_register("Device Uptime Sensor", SNON_CLASS_SENSOR, NULL);
+    entity_add_relationship("Device Uptime Sensor", SNON_REL_CHILD_OF, "Device");
+    entity_add_relationship("Device Uptime Sensor", SNON_REL_MEASURAND, "Seconds Measurand");
+
+    // Add series
+    entity_register("Device Time Series", SNON_CLASS_SERIES, NULL);
+    entity_add_relationship("Device Time Series", SNON_REL_MEASURAND, "Time Measurand");
+    entity_add_relationship("Device Time Series", SNON_REL_CHILD_OF, "Device");
+    entity_add_relationship("Device Time Series", SNON_REL_VALUES, "Device Time");
+
+    entity_register("Device Uptime Series", SNON_CLASS_SERIES, NULL);
+    entity_add_relationship("Device Uptime Series", SNON_REL_MEASURAND, "Seconds Measurand");
+    entity_add_relationship("Device Uptime Series", SNON_REL_CHILD_OF, "Device");
+    entity_add_relationship("Device Uptime Series", SNON_REL_VALUES, "Device Uptime");
+
+    // Add special values
+    entity_register("Device Time", SNON_CLASS_VALUE, NULL);
+    entity_register("Device Uptime", SNON_CLASS_VALUE, NULL);
 
     // ===========================================================================================
     printf("Display startup image...\n");
@@ -145,6 +163,20 @@ int main() {
             else if(strcmp(command, "clear") == 0)
             {
                 uart_puts(uart1, "\033[2J");
+                uart_command_clear();
+            }
+            else if(strcmp(command, "ls") == 0)
+            {
+                char* json_output = entity_name_to_values("Entities");
+
+                if(json_output != NULL)
+                {
+                    uart_puts(uart1, "\n");
+                    uart_puts(uart1, json_output);
+                    uart_puts(uart1, "\n");
+                    free(json_output);
+                }
+
                 uart_command_clear();
             }
             else if(strncmp(command, "cat ", 4) == 0)
