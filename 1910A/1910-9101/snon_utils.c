@@ -93,9 +93,8 @@ void device_initialize(char* entity_name)
     cJSON_AddStringToObject(entity, "eC", "value");
     cJSON_AddStringToObject(entity, "eID", uuid);
     cJSON_AddItemToObject(entity, "eN", name = cJSON_CreateObject());
-    cJSON_AddStringToObject(name, "*", "Defined Entities");
+    cJSON_AddStringToObject(name, "*", "Entities");
     cJSON_AddItemToObject(entity, "v", snon_list);
-
     cJSON_AddItemToObject(entity, "vT", array = cJSON_CreateArray());
     rtc_now_to_counter(current_time);
     cJSON_AddItemToArray(array, cJSON_CreateString(current_time));
@@ -104,7 +103,44 @@ void device_initialize(char* entity_name)
     cJSON_AddItemToArray(snon_list, cJSON_CreateString(uuid));
 }
 
-void entity_register(char* entity_name, char* initial_values)
+bool entity_add_relationship(char* entity_name, char* rel_type, char* rel_entity_name)
+{
+    char        uuid[37];
+    cJSON*      entity = NULL;
+    cJSON*      rel = NULL;
+    cJSON*      array = NULL;
+    bool        add_result = false;
+
+    // Find the UUID for the entity
+    entity_get_uuid(entity_name, uuid);
+
+    entity = cJSON_GetObjectItemCaseSensitive(snon_root, uuid);
+    if(entity != NULL)
+    {
+        rel = cJSON_GetObjectItemCaseSensitive(entity, "eR");
+
+        if(rel == NULL)
+        {
+            cJSON_AddItemToObject(entity, "eR", rel = cJSON_CreateObject());
+        }
+
+        array = cJSON_GetObjectItemCaseSensitive(rel, rel_type);
+
+        if(array == NULL)
+        {
+            cJSON_AddItemToObject(rel, rel_type, array = cJSON_CreateArray());
+        }
+
+        entity_get_uuid(rel_entity_name, uuid);
+        cJSON_AddItemToArray(array, cJSON_CreateString(uuid));
+
+        add_result = true;
+    }
+
+    return(add_result);
+}
+
+void entity_register(char* entity_name, char* entity_class, char* initial_values)
 {
     char    uuid[37];
     char    current_time[28];
@@ -114,17 +150,36 @@ void entity_register(char* entity_name, char* initial_values)
 
     entity_get_uuid(entity_name, uuid);
 
-    cJSON_AddItemToObject(snon_root, uuid, entity = cJSON_Parse(initial_values));
+    if(initial_values != NULL)
+    {
+        // If additional data is passed, parse it
+        entity = cJSON_Parse(initial_values);
+    }
+    else
+    {
+        // Otherwise, create an empty object for the entity
+        entity = cJSON_CreateObject();
+    }
+
+    cJSON_AddItemToObject(snon_root, uuid, entity);
+    cJSON_AddStringToObject(entity, "eC", entity_class);
     cJSON_AddStringToObject(entity, "eID", uuid);
     cJSON_AddItemToObject(entity, "eN", name = cJSON_CreateObject());
     cJSON_AddStringToObject(name, "*", entity_name);
 
-    cJSON_AddItemToObject(entity, "v", array = cJSON_CreateArray());
-    rtc_now_to_counter(current_time);
-    cJSON_AddItemToArray(array, cJSON_CreateString(current_time));
+    if(entity_class == SNON_CLASS_VALUE)
+    {
+        rtc_now_to_counter(current_time);
 
-    cJSON_AddItemToObject(entity, "vT", array = cJSON_CreateArray());
-    cJSON_AddItemToArray(array, cJSON_CreateString(current_time));
+        cJSON_AddItemToObject(entity, "vT", array = cJSON_CreateArray());
+        cJSON_AddItemToArray(array, cJSON_CreateString(current_time));
+    }
+
+    if(strcmp(entity_name, "Device Time") == 0)
+    {
+        cJSON_AddItemToObject(entity, "v", array = cJSON_CreateArray());
+        cJSON_AddItemToArray(array, cJSON_CreateString(current_time));
+    }
 
     cJSON_AddItemToArray(snon_list, cJSON_CreateString(uuid));
 }
@@ -310,15 +365,17 @@ char* entity_uuid_to_json(char* entity_uuid)
             if(rtc_counter_to_iso8601(new_time, entity_time_value))
             {
                 cJSON_ReplaceItemInArray(time_array, 0, cJSON_CreateString(new_time));
+
+                if(is_time_entity)
+                {
+                    value_array = cJSON_GetObjectItemCaseSensitive(entity, "v");
+                    if(time_array != NULL)
+                    {
+                        cJSON_ReplaceItemInArray(value_array, 0, cJSON_CreateString(new_time));
+                    }
+                }
             }
         }
-
-        if(is_time_entity)
-        {
-            value_array = cJSON_GetObjectItemCaseSensitive(entity, "v");
-            cJSON_ReplaceItemInArray(value_array, 0, cJSON_CreateString(new_time));
-        }
-
     }
 
     if(entity != NULL)

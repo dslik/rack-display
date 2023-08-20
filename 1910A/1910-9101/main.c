@@ -88,7 +88,8 @@ int main() {
     printf("Initializing SNON entities...\n");
 
     device_initialize("1910A 1U Rack Display");
-    entity_register("Device Time", "{\"eC\" : \"value\"}");
+    entity_register("Device Time", SNON_CLASS_VALUE, NULL);
+    entity_add_relationship("Device Time", SNON_REL_CHILD_OF, "Device");
 
     char* json_output = entity_name_to_json("Device Time");
     if(json_output != NULL)

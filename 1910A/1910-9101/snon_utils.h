@@ -14,10 +14,39 @@ void device_get_id(uint64_t* id);
 void device_initialize(char* device_name);
 
 void entity_get_uuid(char* entity_name, char* uuid_buffer);
-void entity_register(char* entity_name, char* initial_values);
+void entity_register(char* entity_name, char* entity_class, char* initial_values);
+bool entity_add_relationship(char* entity_name, char* rel_type, char* rel_entity_name);
 char* entity_name_to_json(char* entity_name);
 char* entity_uuid_to_json(char* entity_uuid);
 
 bool rtc_set_time(char* time_iso8601);
 bool rtc_counter_to_iso8601(char* buffer, uint64_t counter);
+
+// Defines
+
+// SNON Classes
+#define SNON_CLASS_DEVICE		"device"
+#define SNON_CLASS_LOCATION		"location"
+#define SNON_CLASS_SENSOR		"sensor"
+#define SNON_CLASS_MEASURAND	"measurand"
+#define SNON_CLASS_SERIES		"series"
+#define SNON_CLASS_VALUE		"value"
+
+// SNON Relationships
+#define	SNON_REL_CHILD_OF		"child_of"
+#define	SNON_REL_MEASURAND		"measurand"
+#define	SNON_REL_POWERED_BY		"powered_by"
+#define	SNON_REL_TIMESYNC_BY	"timesync_by"
+#define	SNON_REL_CONNETED_TO	"connected_to"
+#define	SNON_REL_LOCATED_AT		"located_at"
+#define	SNON_REL_MEASURED_FROM	"measured_from"
+#define	SNON_REL_HEALTH			"health"
+#define	SNON_REL_SETPOINT		"setpoint"
+#define	SNON_REL_ALARMS			"alarms"
+#define	SNON_REL_ALARM_INHIBIT	"alarm_inhibit"
+#define	SNON_REL_INDETERMINATE	"indeterminate"
+#define	SNON_REL_FLAG			"flag"
+#define	SNON_REL_INTERRUPTS		"interrupts"
+
+
 
