@@ -86,6 +86,61 @@ void snon_initialize(char* entity_name)
     cJSON_AddItemToArray(snon_list, cJSON_CreateString(uuid));
 }
 
+bool entity_has_eID(const char* entity_json, char* uuid_buffer)
+{
+    cJSON*  entity = NULL;
+    cJSON*  eID = NULL;
+    char*   eID_string = NULL;
+    bool    has_eID = false;
+
+    entity = cJSON_Parse(entity_json);
+
+    if(entity != NULL)
+    {
+        eID = cJSON_GetObjectItemCaseSensitive(entity, "eID");
+
+        if(eID != NULL)
+        {
+            eID_string = cJSON_GetStringValue(eID);
+            strcpy(uuid_buffer, eID_string);
+
+            has_eID = true;
+        }
+
+        cJSON_free(entity);
+    }
+
+    return(has_eID);
+}
+
+bool entity_has_value(const char* entity_json, char* value_buffer)
+{
+    cJSON*  entity = NULL;
+    cJSON*  value_array = NULL;
+    char*   value_array_string = NULL;
+    bool    has_value = false;
+
+    entity = cJSON_Parse(entity_json);
+
+    if(entity != NULL)
+    {
+        value_array = cJSON_GetObjectItemCaseSensitive(entity, "v");
+
+        if(value_array != NULL)
+        {
+            value_array_string = cJSON_PrintUnformatted(value_array);
+            strcpy(value_buffer, value_array_string);
+            cJSON_free(value_array_string);
+
+            has_value = true;
+        }
+
+        cJSON_free(entity);
+    }
+
+    return(has_value);
+}
+
 bool entity_register(char* entity_name, char* entity_class, char* initial_values)
 {
     char    uuid[37];
@@ -188,12 +243,23 @@ void entity_name_update(char* entity_name, char* updated_values)
 
 void entity_uuid_update(char* entity_uuid, char* updated_values)
 {
-    char    current_time[28];
+    char        uuid[37];
+    char        current_time[28];
     cJSON*      entity = NULL;
     cJSON*      new_value = NULL;
+    cJSON*      new_time_value = NULL;
+    char*       new_time_value_string = NULL;
     cJSON*      value_array = NULL;
     cJSON*      value_time_array = NULL;
     cJSON*      array = NULL;
+    bool        is_time_entity = false;
+
+    // Check if it is the time entity
+    entity_get_uuid("Device Time", uuid);
+    if(strcmp(entity_uuid, uuid) == 0)
+    {
+        is_time_entity = true;
+    }
 
     // Parse the value array
     new_value = cJSON_Parse(updated_values);
@@ -204,21 +270,37 @@ void entity_uuid_update(char* entity_uuid, char* updated_values)
         entity = cJSON_GetObjectItemCaseSensitive(snon_root, entity_uuid);
         if(entity != NULL)
         {
+            rtc_now_to_counter(current_time);
+            
             value_array = cJSON_GetObjectItemCaseSensitive(entity, "v");
             if(value_array != NULL)
             {
-                cJSON_free(cJSON_DetachItemFromObject(entity, "v"));
+                cJSON_Delete(cJSON_DetachItemFromObject(entity, "v"));
             }
-            
-            cJSON_AddItemToObject(entity, "v", new_value);
+
+            // Special case for updating the time
+            if(is_time_entity)
+            {
+                new_time_value = cJSON_GetArrayItem(new_value, 0);
+                if(new_time_value != NULL)
+                {
+                    new_time_value_string = cJSON_GetStringValue(new_time_value);
+                    rtc_set_time(new_time_value_string);
+                }
+
+                cJSON_AddItemToObject(entity, "v", array = cJSON_CreateArray());
+                cJSON_AddItemToArray(array, cJSON_CreateString(current_time));
+            }
+            else
+            {
+                cJSON_AddItemToObject(entity, "v", new_value);
+            }
 
             value_time_array = cJSON_GetObjectItemCaseSensitive(entity, "vT");
             if(value_time_array != NULL)
             {
-                cJSON_free(cJSON_DetachItemFromObject(entity, "vT"));
+                cJSON_Delete(cJSON_DetachItemFromObject(entity, "vT"));
             }
-
-            rtc_now_to_counter(current_time);
 
             cJSON_AddItemToObject(entity, "vT", array = cJSON_CreateArray());
             cJSON_AddItemToArray(array, cJSON_CreateString(current_time));
@@ -321,7 +403,7 @@ char* entity_uuid_to_json(char* entity_uuid)
 
     if(entity != NULL)
     {
-        entity_json = cJSON_Print(entity);
+        entity_json = cJSON_PrintUnformatted(entity);
     }
 
     return(entity_json);
@@ -351,7 +433,7 @@ char* entity_uuid_to_values(char* entity_uuid)
 
         if(value_array != NULL)
         {
-            entity_json = cJSON_Print(value_array);
+            entity_json = cJSON_PrintUnformatted(value_array);
 
             string_char_sub(entity_json, ' ', '\n');
         }

@@ -13,6 +13,8 @@
 void snon_initialize(char* device_name);
 
 bool entity_register(char* entity_name, char* entity_class, char* initial_values);
+bool entity_has_eID(const char* entity_json, char* uuid_buffer);
+bool entity_has_value(const char* entity_json, char* value_buffer);
 bool entity_add_relationship(char* entity_name, char* rel_type, char* rel_entity_name);
 void entity_name_update(char* entity_name, char* updated_values);
 void entity_uuid_update(char* entity_uuid, char* updated_values);

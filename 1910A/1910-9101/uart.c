@@ -21,11 +21,11 @@
 #include "uart.h"
 
 // Constants
-#define COMMAND_STRING_MAX_LENGTH    64
+#define COMMAND_STRING_MAX_LENGTH    6400
 
 // Globals
-char collect_string[] = "0000000000000000000000000000000000000000000000000000000000000000";
-char command_string[] = "0000000000000000000000000000000000000000000000000000000000000000";
+char collect_string[COMMAND_STRING_MAX_LENGTH];
+char command_string[COMMAND_STRING_MAX_LENGTH];
 uint8_t collect_string_pos = 0;
 uint8_t volatile collect_active = 0;
 

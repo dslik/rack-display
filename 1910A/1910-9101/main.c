@@ -62,6 +62,7 @@ int main() {
     uint16_t    counter = 0;
     uint16_t    width = 100;
     uint16_t    height = 10;
+    char*       json_output = NULL;
 
     stdio_init_all();
 
@@ -150,6 +151,10 @@ int main() {
     entity_name_update("Device Temp", snprintf_buffer);
     add_repeating_timer_ms(1000, sensor_update, NULL, &sensor_timer);
  
+    entity_register("Debug LED RGB", SNON_CLASS_VALUE, NULL);
+    snprintf(snprintf_buffer, SNPRINTF_BUFFER_SIZE, "[\"0A000A\"]");
+    entity_name_update("Debug LED RGB", snprintf_buffer);
+ 
     // ===========================================================================================
     printf("Display startup image...\n");
 
@@ -173,6 +178,7 @@ int main() {
     printf("Initializing Serial I/O...\n");
     uart_setup();
 
+    printf("Ready for commands\n");
     while (true)
     {
         // Check if there are any commands pending
@@ -213,40 +219,83 @@ int main() {
 
                 uart_command_clear();
             }
-            else if(strcmp(command, "{}") == 0)
+            else if(command[0] == '{')
             {
-                char*       json_output = entity_name_to_values("Entities");
-                char*       entity_output = NULL;
-                uint16_t    counter = 0;
-                uint16_t    json_output_length = 0;
+                char*       json_output = NULL;
+                char        uuid[37];
 
-                if(json_output != NULL)
+                if(command[1] == '}')
                 {
-                    json_output_length = strlen(json_output);
-                    uart_puts(uart1, "\n[");
+                    // Display all entities
+                    char*       entity_output = NULL;
+                    uint16_t    counter = 0;
+                    uint16_t    json_output_length = 0;
 
-                    while(json_output[counter] != 0)
+                    json_output = entity_name_to_values("Entities");
+
+                    if(json_output != NULL)
                     {
-                        if(json_output[counter] == '"')
+                        json_output_length = strlen(json_output);
+                        uart_puts(uart1, "\n[");
+
+                        while(json_output[counter] != 0)
                         {
-                            sscanf(&json_output[counter + 1], "%36s", &snprintf_buffer);
-                            entity_output = entity_uuid_to_json(snprintf_buffer);
-                            uart_puts(uart1, entity_output);
-                            free(entity_output);
-                            
-                            if(counter + 50 < json_output_length)
+                            if(json_output[counter] == '"')
                             {
-                                uart_puts(uart1, ", ");
+                                sscanf(&json_output[counter + 1], "%36s", &snprintf_buffer);
+                                entity_output = entity_uuid_to_json(snprintf_buffer);
+                                uart_puts(uart1, entity_output);
+                                free(entity_output);
+                                
+                                if(counter + 50 < json_output_length)
+                                {
+                                    uart_puts(uart1, ", ");
+                                }
+
+                                counter = counter + 37;
                             }
 
-                            counter = counter + 37;
+                            counter = counter + 1;
                         }
 
-                        counter = counter + 1;
+                        uart_puts(uart1, "]");
+                        free(json_output);
                     }
+                }
+                else
+                {
+                    if(entity_has_eID(command, snprintf_buffer) == true)
+                    {
+                        // Copy over the UUID
+                        strncpy(uuid, snprintf_buffer, 36);
+                        uuid[36] = 0;
+                        
+                        if(entity_has_value(command, snprintf_buffer) == true)
+                        {
+                            // Update the value
+                            printf("New Value %s\n", snprintf_buffer);
+                            entity_uuid_update(uuid, snprintf_buffer);
+                        }
 
-                    uart_puts(uart1, "]");
-                    free(json_output);
+                        json_output = entity_uuid_to_json(uuid);
+
+                        if(json_output != NULL)
+                        {
+                            uart_puts(uart1, "\n");
+                            uart_puts(uart1, json_output);
+                            free(json_output);
+                        }
+                        else
+                        {
+                            printf("Unable to find entity with UUID %s\n", uuid);
+                            uart_puts(uart1, "\n{\n}");
+                        }
+                    }
+                    else
+                    {
+                        printf("Unable to find UUID\n");
+                        uart_puts(uart1, "\n{\n}");
+                    }
                 }
 
                 uart_command_clear();
@@ -439,5 +488,19 @@ int main() {
 
         fb_display();
         sleep_ms(100);
+
+        json_output = entity_name_to_values("Debug LED RGB");
+
+        if(json_output)
+        {
+            uint8_t r_value = 0;
+            uint8_t g_value = 0;
+            uint8_t b_value = 0;
+
+            sscanf(json_output, "[\"%2X%2X%2X\"]", &r_value, &g_value, &b_value);
+            ws2812_program_init(pio1, display_sm, display_sm_offset, SIGN_DEBUG_WS2812, 1200000, false);
+            put_pixel(urgb_u32(r_value, g_value, b_value));
+            free(json_output);
+        }
     }
 }
