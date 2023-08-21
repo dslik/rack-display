@@ -17,6 +17,7 @@
 // Pico Headers
 #include "pico/stdlib.h"
 #include "hardware/rtc.h"
+#include "hardware/adc.h"
 
 // Local Headers
 #include "ws2812.h"
@@ -29,10 +30,29 @@
 #define SIGN_DEBUG_WS2812       11
 #define SNPRINTF_BUFFER_SIZE    80
 
-// =================================================================================
+const double conversion_factor = 3.3f / (1 << 12);
 
+// =================================================================================
 // Local Functions
+
+float rp2040_get_temp(void)
+{
+    float reading = adc_read() * conversion_factor;
+    reading = 27 - (reading - 0.706) / 0.001721;
+
+    return(reading);
+}
+
+static bool sensor_update(struct repeating_timer *t)
+{
+    char        snprintf_buffer[SNPRINTF_BUFFER_SIZE];
+
+    snprintf(snprintf_buffer, SNPRINTF_BUFFER_SIZE, "[\"%4.2f\"]", rp2040_get_temp());
+    entity_name_update("Device Temp", snprintf_buffer);
+}
+
 int main() {
+    struct repeating_timer  sensor_timer;
     datetime_t  t;
     bool        get_time_valid = false;
     char        snprintf_buffer[SNPRINTF_BUFFER_SIZE];
@@ -85,6 +105,13 @@ int main() {
     printf("Device GUID:   %s\n", snprintf_buffer);
 
     // ===========================================================================================
+    printf("Initialize ADC...\n");
+
+    adc_init();
+    adc_set_temp_sensor_enabled(true);
+    adc_select_input(4);
+
+    // ===========================================================================================
     printf("Initializing SNON entities...\n");
 
     snon_initialize("1910A 1U Rack Display");
@@ -117,6 +144,12 @@ int main() {
     entity_register("Device Time", SNON_CLASS_VALUE, NULL);
     entity_register("Device Uptime", SNON_CLASS_VALUE, NULL);
 
+    // Add values
+    entity_register("Device Temp", SNON_CLASS_VALUE, NULL);
+    snprintf(snprintf_buffer, SNPRINTF_BUFFER_SIZE, "[\"%4.2f\"]", rp2040_get_temp());
+    entity_name_update("Device Temp", snprintf_buffer);
+    add_repeating_timer_ms(1000, sensor_update, NULL, &sensor_timer);
+ 
     // ===========================================================================================
     printf("Display startup image...\n");
 

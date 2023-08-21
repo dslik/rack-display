@@ -14,6 +14,8 @@ void snon_initialize(char* device_name);
 
 bool entity_register(char* entity_name, char* entity_class, char* initial_values);
 bool entity_add_relationship(char* entity_name, char* rel_type, char* rel_entity_name);
+void entity_name_update(char* entity_name, char* updated_values);
+void entity_uuid_update(char* entity_uuid, char* updated_values);
 char* entity_name_to_json(char* entity_name);
 char* entity_uuid_to_json(char* entity_uuid);
 char* entity_name_to_values(char* entity_name);

@@ -38,6 +38,7 @@ target_link_libraries(${PROJECT_NAME}
     hardware_pio
     hardware_rtc
     pico_unique_id
+    hardware_adc
 )
 
 # Enable usb output, disable uart output

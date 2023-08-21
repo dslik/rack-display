@@ -12,6 +12,7 @@
 // System Headers
 #include <stdio.h>
 #include <time.h>
+#include <stdlib.h>
 
 // Pico Headers
 #include "pico/unique_id.h"
@@ -175,11 +176,62 @@ bool entity_add_relationship(char* entity_name, char* rel_type, char* rel_entity
 }
 
 
-void entity_update(char* entity_name, char* updated_values)
+void entity_name_update(char* entity_name, char* updated_values)
 {
+    char        uuid[37];
 
+    // Find the UUID for the entity
+    entity_get_uuid(entity_name, uuid);
 
+    return(entity_uuid_update(uuid, updated_values));
+}
 
+void entity_uuid_update(char* entity_uuid, char* updated_values)
+{
+    char    current_time[28];
+    cJSON*      entity = NULL;
+    cJSON*      new_value = NULL;
+    cJSON*      value_array = NULL;
+    cJSON*      value_time_array = NULL;
+    cJSON*      array = NULL;
+
+    // Parse the value array
+    new_value = cJSON_Parse(updated_values);
+
+    if(new_value != NULL)
+    {
+        // Find the entity by UUID
+        entity = cJSON_GetObjectItemCaseSensitive(snon_root, entity_uuid);
+        if(entity != NULL)
+        {
+            value_array = cJSON_GetObjectItemCaseSensitive(entity, "v");
+            if(value_array != NULL)
+            {
+                cJSON_free(cJSON_DetachItemFromObject(entity, "v"));
+            }
+            
+            cJSON_AddItemToObject(entity, "v", new_value);
+
+            value_time_array = cJSON_GetObjectItemCaseSensitive(entity, "vT");
+            if(value_time_array != NULL)
+            {
+                cJSON_free(cJSON_DetachItemFromObject(entity, "vT"));
+            }
+
+            rtc_now_to_counter(current_time);
+
+            cJSON_AddItemToObject(entity, "vT", array = cJSON_CreateArray());
+            cJSON_AddItemToArray(array, cJSON_CreateString(current_time));
+        }
+        else
+        {
+            cJSON_free(new_value);
+        }
+    }
+    else
+    {
+        printf("\nError: Invalid value %s", updated_values);
+    }
 }
 
 char* entity_name_to_json(char* entity_name)
@@ -239,7 +291,7 @@ char* entity_uuid_to_json(char* entity_uuid)
                 cJSON_ReplaceItemInArray(time_array, 0, cJSON_CreateString(new_time));
 
                 value_array = cJSON_GetObjectItemCaseSensitive(entity, "v");
-                if(time_array != NULL)
+                if(value_array != NULL)
                 {
                     if(is_uptime_entity)
                     {
