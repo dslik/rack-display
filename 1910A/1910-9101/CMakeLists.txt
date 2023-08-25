@@ -20,9 +20,9 @@ add_executable(${PROJECT_NAME}
     fonts.c
     ws2812.c
     uart.c
-    sha1.c
-    snon_utils.c
-    cJSON.c
+    snon/sha1.c
+    snon/snon_utils.c
+    snon/cJSON.c
 )
 
 # Create C header file with the name <pio program>.pio.h
