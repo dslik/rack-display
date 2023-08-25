@@ -1,0 +1,3 @@
+[submodule "1910A/1910-9101/snon"]
+	path = 1910A/1910-9101/snon
+	url = https://github.com/dslik/snon-utils
