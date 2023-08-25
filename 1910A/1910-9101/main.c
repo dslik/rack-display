@@ -22,6 +22,7 @@
 // Local Headers
 #include "ws2812.h"
 #include "image.h"
+#include "fonts.h"
 #include "uart.h"
 #include "sha1.h"
 #include "snon_utils.h"
@@ -68,7 +69,7 @@ int main() {
 
     printf("\n\n");
     printf("---------------------------------------------------------------------------------\n");
-    printf("Protonema 1910 LED Rack Display Test, Firmware 0.1.0-alpha.1\n");
+    printf("Protonema 1910 LED Rack Display Test, Firmware 0.1.0-alpha.2\n");
     printf("CERN-OHL-S v2 (https://github.com/dslik/rack-display/blob/main/license.md)\n");
     printf("---------------------------------------------------------------------------------\n");
     printf("Enable debug LED...\n");
@@ -154,6 +155,10 @@ int main() {
     entity_register("Debug LED RGB", SNON_CLASS_VALUE, NULL);
     snprintf(snprintf_buffer, SNPRINTF_BUFFER_SIZE, "[\"0A000A\"]");
     entity_name_update("Debug LED RGB", snprintf_buffer);
+
+    entity_register("Display Text", SNON_CLASS_VALUE, NULL);
+    snprintf(snprintf_buffer, SNPRINTF_BUFFER_SIZE, "[\"\"]");
+    entity_name_update("Display Text", snprintf_buffer);
  
     // ===========================================================================================
     printf("Display startup image...\n");
@@ -163,7 +168,7 @@ int main() {
     {
         while(y_counter < height)
         {
-            fb_set_grb(x_counter, y_counter, urgb_u32((image[pixel_counter]) / 20,
+            fb_set_grb(99 - x_counter, y_counter, urgb_u32((image[pixel_counter]) / 20,
                                                       (image[pixel_counter + 1]) / 20,
                                                       (image[pixel_counter + 2]) / 20));
 
@@ -188,15 +193,16 @@ int main() {
             if(strcmp(command, "help") == 0)
             {
                 uart_puts(uart1, "\nCommands:");
-                uart_puts(uart1, "\n\"help\"            - Displays list of commands");
-                uart_puts(uart1, "\n\"clear\"           - Clear the serial terminal");
-                uart_puts(uart1, "\n\"ls\"              - List SNON entites");
-                uart_puts(uart1, "\n\"cat <entity>\"    - Display the value of an SNON entity");
-                uart_puts(uart1, "\n\"get time\"        - Get the current time");
-                uart_puts(uart1, "\n\"set time\"        - Set the current time");
-                uart_puts(uart1, "\n\"display refresh\" - Refresh the display");
-                uart_puts(uart1, "\n\"display clear\"   - Set the entire frame buffer to black");
-                uart_puts(uart1, "\n\"display dump\"    - Dump the contents of the display to the terminal");
+                uart_puts(uart1, "\n\"help\"                - Displays list of commands");
+                uart_puts(uart1, "\n\"clear\"               - Clear the serial terminal");
+                uart_puts(uart1, "\n\"ls\"                  - List SNON entites");
+                uart_puts(uart1, "\n\"cat <entity>\"        - Display the value of an SNON entity");
+                uart_puts(uart1, "\n\"get time\"            - Get the current time");
+                uart_puts(uart1, "\n\"set time\"            - Set the current time");
+                uart_puts(uart1, "\n\"display refresh\"     - Refresh the display");
+                uart_puts(uart1, "\n\"display clear\"       - Set the entire frame buffer to black");
+                uart_puts(uart1, "\n\"display text <str>\"  - Display a string on the display ");
+                uart_puts(uart1, "\n\"display dump\"        - Dump the contents of the display to the terminal");
                 uart_puts(uart1, "\n\"set pixel x,y to r g b\"   - Set a pixel at x,y to r g b");
                 uart_command_clear();
             }
@@ -422,6 +428,12 @@ int main() {
                 uart_puts(uart1, "\nDone.");
                 uart_command_clear();
             }
+            else if(strncmp(command, "display text ", 13) == 0)
+            {
+                fb_display_clear();
+                insert_string((char*) &command[13], geneva_bold, 0);
+                uart_command_clear();
+            }
             else if(strcmp(command, "display dump") == 0)
             {
                 get_time_valid = rtc_get_datetime(&t);
@@ -486,9 +498,6 @@ int main() {
             }
         }
 
-        fb_display();
-        sleep_ms(100);
-
         json_output = entity_name_to_values("Debug LED RGB");
 
         if(json_output)
@@ -502,5 +511,24 @@ int main() {
             put_pixel(urgb_u32(r_value, g_value, b_value));
             free(json_output);
         }
+
+        json_output = entity_name_to_values("Display Text");
+
+        if(json_output)
+        {
+            if(strlen(json_output) > 4)
+            {
+                json_output[strlen(json_output) - 2] = 0;
+                fb_display_clear();
+                insert_string(&snprintf_buffer[2], geneva_bold, 0);
+            }
+
+            free(json_output);
+        }
+
+        fb_display();
+
+        sleep_ms(100);
+
     }
 }

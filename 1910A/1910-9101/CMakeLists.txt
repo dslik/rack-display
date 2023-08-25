@@ -17,6 +17,7 @@ pico_sdk_init()
 add_executable(${PROJECT_NAME} 
     main.c
     image.c
+    fonts.c
     ws2812.c
     uart.c
     sha1.c

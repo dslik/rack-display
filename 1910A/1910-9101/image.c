@@ -11,7 +11,7 @@
 
 #include "image.h"
 #include "ws2812.h"
-
+#include <stdio.h>
 // Local Globals
 uint8_t 	buf1[FB_WIDTH * FB_HEIGHT * 3 * sizeof(uint8_t)];
 uint8_t		buf2[FB_WIDTH * FB_HEIGHT * 3 * sizeof(uint8_t)];
@@ -23,13 +23,13 @@ int 		display_sm_offset;
 
 uint32_t fb_get_grb(uint8_t x, uint8_t y)
 {
-	// Bounds checking
+    // Bounds checking
 	if(x > 99) x = 99;
 	if(y > 9) y = 9;
 
-	return urgb_u32(current_buffer[0 + (x * 3) + (y * 3 * FB_WIDTH)],
-		   		    current_buffer[1 + (x * 3) + (y * 3 * FB_WIDTH)],
-		     		current_buffer[2 + (x * 3) + (y * 3 * FB_WIDTH)]);
+	return urgb_u32(current_buffer[0 + (3 * (y + x * 10))],
+		   		    current_buffer[1 + (3 * (y + x * 10))],
+		     		current_buffer[2 + (3 * (y + x * 10))]);
 }
 
 void fb_set_grb(uint8_t x, uint8_t y, uint32_t grb_colour)
@@ -38,9 +38,9 @@ void fb_set_grb(uint8_t x, uint8_t y, uint32_t grb_colour)
 	if(x > 99) x = 99;
 	if(y > 9) y = 9;
 
-	current_buffer[0 + (x * 3) + (y * 3 * FB_WIDTH)] = (grb_colour >> 8) & 0xFF;
-	current_buffer[1 + (x * 3) + (y * 3 * FB_WIDTH)] = (grb_colour >> 16 ) & 0xFF;
-	current_buffer[2 + (x * 3) + (y * 3 * FB_WIDTH)] = grb_colour & 0xFF;
+	current_buffer[0 + (3 * (y + x * 10))] = (grb_colour >> 8) & 0xFF;
+	current_buffer[1 + (3 * (y + x * 10))] = (grb_colour >> 16 ) & 0xFF;
+	current_buffer[2 + (3 * (y + x * 10))] = grb_colour & 0xFF;
 }
 
 void fb_display(void)
@@ -77,7 +77,7 @@ void fb_display(void)
     {
         while(y_counter < FB_HEIGHT)
         {
-            put_pixel(fb_get_grb(x_counter, y_counter));
+            put_pixel(fb_get_grb(99 - x_counter, y_counter));
     		
             y_counter = y_counter + 1;
         }
@@ -100,7 +100,7 @@ void fb_display(void)
     {
         while(y_counter < FB_HEIGHT)
         {
-            put_pixel(fb_get_grb(x_counter, y_counter));
+            put_pixel(fb_get_grb(99 - x_counter, y_counter));
 
             y_counter = y_counter + 1;
         }
