@@ -59,6 +59,18 @@ int16_t insert_string(char* string, uint8_t typeface, int16_t x_offset)
 
 	while(string[counter] != 0)
 	{
+		if(string[counter] == '<' && string[counter + 1] == 'b' && string[counter + 2] == '>')
+		{
+			typeface = typeface + 1;
+			counter = counter + 3;
+		}
+
+		if(string[counter] == '<' && string[counter + 1] == '/' && string[counter + 2] == 'b' && string[counter + 3] == '>')
+		{
+			typeface = typeface - 1;
+			counter = counter + 4;
+		}
+
 		offset = insert_character(string[counter], typeface, offset);
 
 		counter = counter + 1;
@@ -69,7 +81,53 @@ int16_t insert_string(char* string, uint8_t typeface, int16_t x_offset)
 
 const char* character_to_array(char character, uint8_t typeface)
 {
-	if(typeface == geneva_bold)
+	if(typeface == GENEVA)
+	{
+		if(character == ' ') return(glyph_sp);
+		if(character == 'a' || character == 'A') return(glyph_a);
+		if(character == 'b' || character == 'B') return(glyph_b);
+		if(character == 'c' || character == 'C') return(glyph_c);
+		if(character == 'd' || character == 'D') return(glyph_d);
+		if(character == 'e' || character == 'E') return(glyph_e);
+		if(character == 'f' || character == 'F') return(glyph_f);
+		if(character == 'g' || character == 'G') return(glyph_g);
+		if(character == 'h' || character == 'H') return(glyph_h);
+		if(character == 'i' || character == 'I') return(glyph_i);
+		if(character == 'j' || character == 'J') return(glyph_j);
+		if(character == 'k' || character == 'K') return(glyph_k);
+		if(character == 'l' || character == 'L') return(glyph_l);
+		if(character == 'm' || character == 'M') return(glyph_m);
+		if(character == 'n' || character == 'N') return(glyph_n);
+		if(character == 'o' || character == 'O') return(glyph_o);
+		if(character == 'p' || character == 'P') return(glyph_p);
+		if(character == 'q' || character == 'Q') return(glyph_q);
+		if(character == 'r' || character == 'R') return(glyph_r);
+		if(character == 's' || character == 'S') return(glyph_s);
+		if(character == 't' || character == 'T') return(glyph_t);
+		if(character == 'u' || character == 'U') return(glyph_u);
+		if(character == 'v' || character == 'V') return(glyph_v);
+		if(character == 'w' || character == 'W') return(glyph_w);
+		if(character == 'x' || character == 'X') return(glyph_x);
+		if(character == 'y' || character == 'Y') return(glyph_y);
+		if(character == 'z' || character == 'Z') return(glyph_z);
+		if(character == '1') return(glyph_1);
+		if(character == '2') return(glyph_2);
+		if(character == '3') return(glyph_3);
+		if(character == '4') return(glyph_4);
+		if(character == '5') return(glyph_5);
+		if(character == '6') return(glyph_6);
+		if(character == '7') return(glyph_7);
+		if(character == '8') return(glyph_8);
+		if(character == '9') return(glyph_9);
+		if(character == '0') return(glyph_0);
+		if(character == '!') return(glyph_ex);
+		if(character == '(') return(glyph_ob);
+		if(character == ')') return(glyph_cb);
+		if(character == ',') return(glyph_com);
+		if(character == '.') return(glyph_per);
+	}
+
+	if(typeface == GENEVA_BOLD)
 	{
 		if(character == ' ') return(glyph_sp_bold);
 		if(character == 'a' || character == 'A') return(glyph_a_bold);
@@ -120,7 +178,53 @@ const char* character_to_array(char character, uint8_t typeface)
 
 const uint8_t character_to_width(char character, uint8_t typeface)
 {
-	if(typeface == geneva_bold)
+	if(typeface == GENEVA)
+	{
+		if(character == ' ') return(glyph_sp_width);
+		if(character == 'a' || character == 'A') return(glyph_a_width);
+		if(character == 'b' || character == 'B') return(glyph_b_width);
+		if(character == 'c' || character == 'C') return(glyph_c_width);
+		if(character == 'd' || character == 'D') return(glyph_d_width);
+		if(character == 'e' || character == 'E') return(glyph_e_width);
+		if(character == 'f' || character == 'F') return(glyph_f_width);
+		if(character == 'g' || character == 'G') return(glyph_g_width);
+		if(character == 'h' || character == 'H') return(glyph_h_width);
+		if(character == 'i' || character == 'I') return(glyph_i_width);
+		if(character == 'j' || character == 'J') return(glyph_j_width);
+		if(character == 'k' || character == 'K') return(glyph_k_width);
+		if(character == 'l' || character == 'L') return(glyph_l_width);
+		if(character == 'm' || character == 'M') return(glyph_m_width);
+		if(character == 'n' || character == 'N') return(glyph_n_width);
+		if(character == 'o' || character == 'O') return(glyph_o_width);
+		if(character == 'p' || character == 'P') return(glyph_p_width);
+		if(character == 'q' || character == 'Q') return(glyph_q_width);
+		if(character == 'r' || character == 'R') return(glyph_r_width);
+		if(character == 's' || character == 'S') return(glyph_s_width);
+		if(character == 't' || character == 'T') return(glyph_t_width);
+		if(character == 'u' || character == 'U') return(glyph_u_width);
+		if(character == 'v' || character == 'V') return(glyph_v_width);
+		if(character == 'w' || character == 'W') return(glyph_w_width);
+		if(character == 'x' || character == 'X') return(glyph_x_width);
+		if(character == 'y' || character == 'Y') return(glyph_y_width);
+		if(character == 'z' || character == 'Z') return(glyph_z_width);
+		if(character == '1') return(glyph_1_width);
+		if(character == '2') return(glyph_2_width);
+		if(character == '3') return(glyph_3_width);
+		if(character == '4') return(glyph_4_width);
+		if(character == '5') return(glyph_5_width);
+		if(character == '6') return(glyph_6_width);
+		if(character == '7') return(glyph_7_width);
+		if(character == '8') return(glyph_8_width);
+		if(character == '9') return(glyph_9_width);
+		if(character == '0') return(glyph_0_width);
+		if(character == '!') return(glyph_ex_width);
+		if(character == '(') return(glyph_ob_width);
+		if(character == ')') return(glyph_cb_width);
+		if(character == ',') return(glyph_com_width);
+		if(character == '.') return(glyph_per_width);
+	}
+
+	if(typeface == GENEVA_BOLD)
 	{
 		if(character == ' ') return(glyph_sp_bold_width);
 		if(character == 'a' || character == 'A') return(glyph_a_bold_width);

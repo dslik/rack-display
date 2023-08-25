@@ -431,7 +431,7 @@ int main() {
             else if(strncmp(command, "display text ", 13) == 0)
             {
                 fb_display_clear();
-                insert_string((char*) &command[13], geneva_bold, 0);
+                insert_string((char*) &command[13], GENEVA, 0);
                 uart_command_clear();
             }
             else if(strcmp(command, "display dump") == 0)
@@ -520,7 +520,7 @@ int main() {
             {
                 json_output[strlen(json_output) - 2] = 0;
                 fb_display_clear();
-                insert_string(&snprintf_buffer[2], geneva_bold, 0);
+                insert_string(&snprintf_buffer[2], GENEVA, 0);
             }
 
             free(json_output);
