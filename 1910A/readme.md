@@ -17,6 +17,81 @@ Possible future enhancements:
 
 _Feel free to ask questions by opening an issue!_
 
+## 2023-08-25
+
+Software is now in pretty good shape.
+
+You can retrieve and set sensor values via SNON:
+
+**Bootstrap discovery:**
+
+Send to device:
+```
+{}
+```
+
+Receive from device:
+```
+[{"eC":"device","eID":"A8C9ED44-7FD5-57EA-A467-703181738827","eN":{"*":"1910A 1U Rack Displa
+y"}}, {"eC":"value","eID":"AEB49E46-B8DC-5F3A-A2FF-851915E41B23","eN":{"*":"Entities"},"v":[
+"A8C9ED44-7FD5-57EA-A467-703181738827","AEB49E46-B8DC-5F3A-A2FF-851915E41B23","3F338A51-F643
+-5B40-9541-49550B036D3A","03057376-6765-565E-9837-E287D4CC27D0","D54D2FC6-33F0-57BE-B5A9-2D4
+509A5AAE5","D45B191B-DBBA-5B99-B253-ECB6872A012C","42601086-6372-5819-8C2C-2FC7CAE1CCA1","68
+86D28C-BC5A-524B-8D25-4F3A21580869","97FE1583-E0F5-5AF3-B504-E4274FBA7B5F","A1E5005D-BA77-57
+99-B64A-87F93055C175","211902E9-E950-58EA-81E4-79377DB83664","28A7F370-5153-56A6-9D94-44FC6F
+3B8644","E87C3F67-CB65-560B-9315-BFB993C7E03A"],"vT":["2023-08-25T08:34:16.758313Z"]}, {"meU
+":"s","meT":"iso8601","meAq":"count","eC":"measurand","eID":"3F338A51-F643-5B40-9541-49550B0
+36D3A","eN":{"*":"Time Measurand"}}, {"meU":"s","meT":"numeric","meAq":"count","meUS":{"*":"
+s"},"meUSx":{"*":"seconds"},"meR":"1","meAc":"1","eC":"measurand","eID":"03057376-6765-565E-
+9837-E287D4CC27D0","eN":{"*":"Seconds Measurand"}}, {"eC":"sensor","eID":"D54D2FC6-33F0-57BE
+-B5A9-2D4509A5AAE5","eN":{"*":"Device Time Sensor"},"eR":{"child_of":["A8C9ED44-7FD5-57EA-A4
+67-703181738827"],"measurand":["3F338A51-F643-5B40-9541-49550B036D3A"]}}, {"eC":"sensor","eI
+D":"D45B191B-DBBA-5B99-B253-ECB6872A012C","eN":{"*":"Device Uptime Sensor"},"eR":{"child_of"
+:["A8C9ED44-7FD5-57EA-A467-703181738827"],"measurand":["03057376-6765-565E-9837-E287D4CC27D0
+"]}}, {"eC":"series","eID":"42601086-6372-5819-8C2C-2FC7CAE1CCA1","eN":{"*":"Device Time Ser
+ies"},"eR":{"measurand":["3F338A51-F643-5B40-9541-49550B036D3A"],"child_of":["A8C9ED44-7FD5-
+57EA-A467-703181738827"],"values":["97FE1583-E0F5-5AF3-B504-E4274FBA7B5F"]}}, {"eC":"series"
+,"eID":"6886D28C-BC5A-524B-8D25-4F3A21580869","eN":{"*":"Device Uptime Series"},"eR":{"measu
+rand":["03057376-6765-565E-9837-E287D4CC27D0"],"child_of":["A8C9ED44-7FD5-57EA-A467-70318173
+8827"],"values":["A1E5005D-BA77-5799-B64A-87F93055C175"]}}, {"eC":"value","eID":"97FE1583-E0
+F5-5AF3-B504-E4274FBA7B5F","eN":{"*":"Device Time"},"vT":["2023-08-25T08:41:52.070132Z"],"v"
+:["2023-08-25T08:41:52.070132Z"]}, {"eC":"value","eID":"A1E5005D-BA77-5799-B64A-87F93055C175
+","eN":{"*":"Device Uptime"},"vT":["2023-08-25T08:41:52.084258Z"],"v":["455367557"]}, {"eC":
+"value","eID":"211902E9-E950-58EA-81E4-79377DB83664","eN":{"*":"Device Temp"},"v":["24.33"],
+"vT":["2023-08-25T08:41:51.426916Z"]}, {"eC":"value","eID":"28A7F370-5153-56A6-9D94-44FC6F3B
+8644","eN":{"*":"Debug LED RGB"},"v":["0A000A"],"vT":["2023-08-25T08:34:16.762645Z"]}, {"eC"
+:"value","eID":"E87C3F67-CB65-560B-9315-BFB993C7E03A","eN":{"*":"Display Text"},"v":[""],"vT
+":["2023-08-25T08:41:41.965866Z"]}]
+```
+
+**Read a sensor (display text):**
+
+Send to device:
+```
+{"eID":"E87C3F67-CB65-560B-9315-BFB993C7E03A"}
+```
+
+Receive from device:
+```
+{"eC":"value","eID":"E87C3F67-CB65-560B-9315-BFB993C7E03A","eN":{"*":"Display Text"},"v":[""
+],"vT":["2023-08-25T08:41:41.965866Z"]}
+```
+
+**Set a sensor value (display text):**
+
+Send to device:
+```
+{"eID":"E87C3F67-CB65-560B-9315-BFB993C7E03A","v":["THIS IS A TEST"]}
+```
+
+Receive from device:
+```
+{"eC":"value","eID":"E87C3F67-CB65-560B-9315-BFB993C7E03A","eN":{"*":"Display Text"},"v":["T
+HIS IS A TEST"],"vT":["2023-08-25T08:42:26.915808Z"]}
+```
+
+Almost done! Just need to add some Emoji support, and a few other odds and ends.
+
 ## 2023-08-17
 
 The updated controller board came in with the latest batch of PCBs. Panelization looks good:
